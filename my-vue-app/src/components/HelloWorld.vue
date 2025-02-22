@@ -11,7 +11,7 @@ const count = ref(0)
 <template>
   <h1>{{ msg }}</h1>
 
-  <div class="card text-3xl font-bold flex flex-col">
+  <div class="card text-2xl font-bold flex flex-col ">
     <button type="button" @click="count++">count is {{ count }}</button>
   </div>
   <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
