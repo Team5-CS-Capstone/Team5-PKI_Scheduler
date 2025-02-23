@@ -1,10 +1,18 @@
 <script setup>
-import HomePage from './components/HomePage.vue'
+import HomePage from './pages/HomePage.vue'
+import Sidebar from './components/Sidebar.vue'
 </script>
 
 <template>
+  <div class="flex h-screen w-screen bg-gray-300">
+    <!-- Sidebar -->
+    <Sidebar class="h-full bg-gray-400" />
 
-  <HomePage msg="" />
+    <!-- Main Content Area -->
+    <div class="p-6 flex flex-col justify-center w-full">
+      <RouterView />
+    </div>
+  </div>
 </template>
 
 <style scoped>
