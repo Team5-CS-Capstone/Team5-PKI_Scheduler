@@ -1,12 +1,15 @@
 import { createRouter, createWebHistory } from "vue-router";
 import HomePage from "../pages/HomePage.vue";
-import SearchPage from "../pages/SearchPage.vue";
 import ExportPage from "../pages/ExportPage.vue";
+import ClassList from "../pages/ClassList.vue";
+import ClassDetails from "../pages/ClassDetails.vue";
 
 const routes = [
     { path: "/", component: HomePage},
-    { path: "/search", component: SearchPage},
+    { path: "/class", component: ClassList},
     { path: "/export", component: ExportPage},
+    { path: "/class/:id", component: ClassDetails, props: true},
+    // { path: "/class", component: ClassList, props: true},
 ];
 
 const router = createRouter({
