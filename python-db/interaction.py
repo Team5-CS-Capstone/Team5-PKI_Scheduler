@@ -66,10 +66,16 @@ course_data = {
 }
 
 # Print all lists
-for key, values in course_data.items():
-    print(f"{key}:")
-    for value in values:
-        print(f"{value}")
+# for key, values in course_data.items():
+#     print(f"{key}:")
+#     for value in values:
+#         print(f"{value}")
+
+# Print each dictionary item one at a time
+for i in range(len(term_list)):
+    # Creates a dictionary for each course_data entry  
+    entry = {key: values[i] for key, values in course_data.items()}
+    print(entry)  
 
 # #Instructions:
 # # WSL - sudo apt install sqlite3
