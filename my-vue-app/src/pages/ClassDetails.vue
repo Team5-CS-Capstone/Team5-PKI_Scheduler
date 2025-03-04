@@ -37,7 +37,6 @@ const fetchClassDetails = async () => {
 
 // Load data when component mounts
 onMounted(() => {
-    console.log("🟡 onMounted Hook Triggered");  // Debugging Lifecycle Hook
     fetchClassDetails();
 });
 
