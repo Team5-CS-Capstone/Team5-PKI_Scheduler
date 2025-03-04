@@ -42,6 +42,7 @@ A shared virtual environment exists within this folder that we can easily access
 ```
 Once in the venv (flask_env), it should be displayed before your terminal current directory
 This virtual environment is required as all needed packages for backend development exist for this project
+### app.py - contains all API endpoints and creation of tables for the database
 
 
 ## Release Notes
