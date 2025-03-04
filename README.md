@@ -34,6 +34,16 @@ Simply use Tailwind utility classes in Vue components.
 
 Docs: https://tailwindcss.com/docs/installation/using-vite
 
+## Working with Backend/Database
+Everything backend/database related is stored within the ./python_db folder so cd into that folder before anything.
+A shared virtual environment exists within this folder that we can easily access using the script below:
+```sh
+.\flask_venv\Scripts\Activate
+```
+Once in the venv (flask_env), it should be displayed before your terminal current directory
+This virtual environment is required as all needed packages for backend development exist for this project
+
+
 ## Release Notes
 #### Milestone #1:
 - The design idea was completed in Figma
