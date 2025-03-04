@@ -1,6 +1,8 @@
-<script setup>
-import { ref } from 'vue'
-</script>
+<!-- 
+somehow need to obtain class ID from route and using that 
+information we can make an API call with that ID and display 
+and update the proper information 
+-->
 
 <template>
     <div class="flex justify-center">
@@ -12,4 +14,9 @@ import { ref } from 'vue'
     </div>
 </template>
 
-<style scoped></style>
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+
+const classData = ref(null);
+</script>

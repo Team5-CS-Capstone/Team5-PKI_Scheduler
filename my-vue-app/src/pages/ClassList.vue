@@ -27,15 +27,15 @@ import { ref, computed } from "vue";
 // currently will just mimic data 
 // that we are going to get from the database
 const courses = ref([
-    { id: 2400, name: "CSCI 2400" },
-    { id: 2500, name: "CSCI 2500" },
-    { id: 2600, name: "CSCI 2600" },
-    { id: 2400, name: "CSCI 2400" },
-    { id: 2500, name: "CSCI 2500" },
-    { id: 2600, name: "CSCI 2600" },
-    { id: 2400, name: "CSCI 2400" },
-    { id: 2500, name: "CSCI 2500" },
-    { id: 2600, name: "CSCI 2600" },
+    { id: 1, name: "CSCI 2400" },
+    { id: 2, name: "CSCI 2500" },
+    { id: 3, name: "CSCI 2600" },
+    { id: 4, name: "CSCI 2400" },
+    { id: 5, name: "CSCI 2500" },
+    { id: 6, name: "CSCI 2600" },
+    { id: 7, name: "CSCI 2400" },
+    { id: 8, name: "CSCI 2500" },
+    { id: 9, name: "CSCI 2600" },
 ])
 
 // another reactive variable is needed
