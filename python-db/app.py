@@ -23,7 +23,7 @@ def get_class(class_id):
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM classes WHERE id = ?", (class_id))
+    cursor.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
     # fetch just one row as theres only one class per id
     row = cursor.fetchone()
     conn.close()

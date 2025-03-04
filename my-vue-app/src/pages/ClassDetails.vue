@@ -18,7 +18,7 @@
     </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import axios from "axios";
@@ -28,14 +28,17 @@ const route = useRoute();
 
 const fetchClassDetails = async () => {
     try {
-        const response = await axios.get(`http://127.0.0.1:5000/class/${route.params.id}`)
+        const response = await axios.get(`http://127.0.0.1:5000/class/${route.params.id}`);
         classData.value = response.data;
     } catch (error) {
-        console.error("Error fetching class details:", error);
         classData.value = null;
     }
 };
 
 // Load data when component mounts
-onMounted(fetchClassDetails);
+onMounted(() => {
+    console.log("🟡 onMounted Hook Triggered");  // Debugging Lifecycle Hook
+    fetchClassDetails();
+});
+
 </script>
