@@ -23,10 +23,12 @@ cd my-vue-app
 npm install
 ```
 
-3. Activate Virtual Env:
+3. Create and Activate Virtual Environment and Install Requirements
 ```sh
 cd python-db
+python -m venv <name_of_env>
 .\flask_venv\Scripts\Activate
+pip install -r requirements.txt
 ```
 
 4. Populate database:
