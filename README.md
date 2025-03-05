@@ -19,26 +19,27 @@ cd Team5-PKI_Scheduler
 
 2. Install dependencies:
 ```sh
+cd my-vue-app
 npm install
 ```
 
-4. Activate Virtual Env:
+3. Activate Virtual Env:
 ```sh
 cd python-db
 .\flask_venv\Scripts\Activate
 ```
 
-5. Populate database:
+4. Populate database:
 ```sh
 python import_csv_to_table.py 
 ```
 
-6. Run backend (flask)
+5. Run backend (flask)
 ```sh
 python app.py
 ```
 
-7. Run application
+6. Run application
 ```sh
 cd ..
 cd my-vue-app
