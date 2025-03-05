@@ -10,7 +10,7 @@ A **Vue 3** application built to help class coordinators streamline the scheduli
 By offering different reassignment strategies and real-time warnings for over-enrolled courses, the application simplifies the coordinator's task of ensuring every class is assigned to a properly sized room.
 
 ---
-## 🚀 Installation
+## 🚀 Start Application
 1. **Clone the repository:**
 ```sh
 git clone https://github.com/zkak345/Team5-PKI_Scheduler.git
@@ -20,17 +20,27 @@ cd Team5-PKI_Scheduler
 2. Install dependencies:
 ```sh
 npm install
-```
 
-3. Run application
+```
+3. Populate database:
 ```sh
-npm run dev
+cd python-db
+python import_csv_to_table.py 
 ```
 
 4. Run backend (flask)
 ```sh
+cd python-db
 python app.py
 ```
+
+5. Run application
+```sh
+cd ..
+cd my-vue-app
+npm run dev
+```
+
 
 ## Styling with Tailwind CSS
 Tailwind CSS is already configured via @tailwindcss/vite.
