@@ -53,12 +53,13 @@ def get_class(class_id):
         class_data = {
             "id": row[0],
             "term": row[1],
-            "section": row[2],
-            "name": row[3],  # Course Title
-            "room": row[4],
-            "time": row[5],
-            "currentEnrollment": row[6],
-            "maxEnrollment": row[7]
+            "courseName": row[2],
+            "section": row[3],
+            "name": row[4],  # Course Title
+            "room": row[5],
+            "time": row[6],
+            "currentEnrollment": row[7],
+            "maxEnrollment": row[8]
         }
         # serialize and return class data if class is found
         return jsonify(class_data), 200
