@@ -11,7 +11,7 @@
         </RouterLink>
 
         <!-- Search Classes Page -->
-        <RouterLink to="/class" class="bg-gray-300 rounded-xl p-3 hover:bg-gray-500">
+        <RouterLink to="/classes" class="bg-gray-300 rounded-xl p-3 hover:bg-gray-500">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                 stroke="currentColor" class="size-10 text-sky-500">
                 <path stroke-linecap="round" stroke-linejoin="round"

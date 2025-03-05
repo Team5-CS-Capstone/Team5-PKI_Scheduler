@@ -131,7 +131,7 @@ if __name__ == "__main__":
     DB_FILE = "database.db"
 
     # Define the relevant columns we need
-    relevant_columns = ["Term", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+    relevant_columns = ["Term", "Term Code" "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
 
     # Check if file exists
     if not os.path.exists(input_file):
