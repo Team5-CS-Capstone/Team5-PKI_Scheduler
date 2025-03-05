@@ -10,22 +10,44 @@ A **Vue 3** application built to help class coordinators streamline the scheduli
 By offering different reassignment strategies and real-time warnings for over-enrolled courses, the application simplifies the coordinator's task of ensuring every class is assigned to a properly sized room.
 
 ---
-## 🚀 Installation
-1️⃣ **Clone the repository:**
+## 🚀 Start Application
+1. **Clone the repository:**
 ```sh
 git clone https://github.com/zkak345/Team5-PKI_Scheduler.git
 cd Team5-PKI_Scheduler
 ```
 
-2️⃣ Install dependencies:
+2. Install dependencies:
 ```sh
+cd my-vue-app
 npm install
 ```
 
-3️⃣ Run application
+3. Create and Activate Virtual Environment and Install Requirements
 ```sh
+cd python-db
+python -m venv <name_of_env>
+.\flask_venv\Scripts\Activate
+pip install -r requirements.txt
+```
+
+4. Populate database:
+```sh
+python import_csv_to_table.py 
+```
+
+5. Run backend (flask)
+```sh
+python app.py
+```
+
+6. Run application
+```sh
+cd ..
+cd my-vue-app
 npm run dev
 ```
+
 
 ## Styling with Tailwind CSS
 Tailwind CSS is already configured via @tailwindcss/vite.
@@ -33,6 +55,43 @@ Tailwind CSS is already configured via @tailwindcss/vite.
 Simply use Tailwind utility classes in Vue components.
 
 Docs: https://tailwindcss.com/docs/installation/using-vite
+
+## Working with Backend
+Everything backend/database related is stored within the ./python_db folder so cd into that folder before anything.
+A shared virtual environment exists within this folder that we can easily access using the script below:
+```sh
+.\flask_venv\Scripts\Activate
+```
+Once in the venv (flask_env), it should be displayed before your terminal current directory
+This virtual environment is required as all needed packages for backend development exist for this project
+
+### Run Flask API (app.py)
+```sh
+python app.py
+```
+It will run on **http://127.0.0.1:5000** and endpoints for the API will be located within app.py \
+Example of an endpoint that takes in a parameter for class ID below:
+
+## API Endpoints
+| **Endpoint**       | **Method** | **Description**                       |
+|--------------------|-----------|---------------------------------------|
+| `/classes`        | `GET`      | Fetch all class details               |
+| `/class/<id>`     | `GET`      | Fetch a single class by ID            |
+
+
+## SQLite Database Installation/Recommendations 
+Install [SQLite](https://www.sqlite.org/download.html) here, steps below:
+- Click the link and download the precompiled binaries for windows (sqlite-tools-win-x64-3490100.zip)
+- Create and put the download into a folder at root level **C:\sqlite**
+- Extract the download file into this folder
+- Edit your environmental variables, specifically PATH (click, edit, new) and add **C:\sqlite**
+- Restart env and possibly computer
+To enter the SQLite terminal run:
+```sh
+sqlite3 database.db
+```
+Then regular SQL syntax can be used to run commands on the db e.g. (select * from <table_name>) \
+SQLite viewer extension for VS Code is also very useful (allows you to open .db files in SQLite form)
 
 ## Release Notes
 #### Milestone #1:
