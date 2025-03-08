@@ -1,8 +1,9 @@
 <template>
-    <span class=" text-black text-2xl font-semibold mb-4 text-start">CSCI {}</span>
+    <span class=" text-black text-2xl font-semibold mb-4 text-start"></span>
     <div class="flex flex-col space-y-4 text-black text-start h-full">
         <!-- Display class details when data is available -->
         <div v-if="classData">
+            <p class="text-4xl font-bold mb-10 text-red"> {{ classData.courseName }}</p>
             <h2 class="text-2xl font-semibold">{{ classData.name }}</h2>
             <p><strong>Term:</strong> {{ classData.term }}</p>
             <p><strong>Section:</strong> {{ classData.section }}</p>

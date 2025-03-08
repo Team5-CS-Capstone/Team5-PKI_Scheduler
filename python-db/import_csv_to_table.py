@@ -14,6 +14,7 @@ def create_table():
         CREATE TABLE IF NOT EXISTS classes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             term TEXT,
+            course_number TEXT,
             section TEXT,
             course_title TEXT,
             room TEXT,
@@ -34,9 +35,9 @@ def insert_csv_into_table(course_data):
     # for entry in course_data:
     for entry in course_data:
         cursor.execute("""
-            INSERT INTO classes (term, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (entry['Term'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
+            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
                 int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
 
     conn.commit()
@@ -74,6 +75,7 @@ def parse_csv(csv_document):
                 # dictionaries per class entry
                 course_data.append({
                     "Term": row[col_indexes["Term"]],
+                    "Course": row[col_indexes["Course"]],
                     "Section #": row[col_indexes["Section #"]],
                     "Course Title": row[col_indexes["Course Title"]],
                     "Room": row[col_indexes["Room"]],
@@ -131,7 +133,7 @@ if __name__ == "__main__":
     DB_FILE = "database.db"
 
     # Define the relevant columns we need
-    relevant_columns = ["Term", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
 
     # Check if file exists
     if not os.path.exists(input_file):

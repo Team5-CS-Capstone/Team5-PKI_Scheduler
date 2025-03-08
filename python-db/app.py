@@ -17,6 +17,27 @@ CORS(app)
 # Our SQLite database file
 DB_FILE = "database.db"
 
+@app.route("/classes", methods=["GET"])
+def get_classes():
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, section, course_title FROM classes")
+    rows = cursor.fetchall()
+    conn.close()
+
+    # Serialize the data
+    classes = []
+    for row in rows:
+        class_data = {
+            "id": row[0],
+            "section": row[1],
+            "name": row[2], 
+        }
+        classes.append(class_data)
+
+    return jsonify(classes), 200
+
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
 def get_class(class_id):
@@ -32,12 +53,13 @@ def get_class(class_id):
         class_data = {
             "id": row[0],
             "term": row[1],
-            "section": row[2],
-            "name": row[3],  # Course Title
-            "room": row[4],
-            "time": row[5],
-            "currentEnrollment": row[6],
-            "maxEnrollment": row[7]
+            "courseName": row[2],
+            "section": row[3],
+            "name": row[4],  # Course Title
+            "room": row[5],
+            "time": row[6],
+            "currentEnrollment": row[7],
+            "maxEnrollment": row[8]
         }
         # serialize and return class data if class is found
         return jsonify(class_data), 200

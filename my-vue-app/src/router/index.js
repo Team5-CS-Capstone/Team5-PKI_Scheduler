@@ -6,7 +6,7 @@ import ClassDetails from "../pages/ClassDetails.vue";
 
 const routes = [
     { path: "/", component: HomePage},
-    { path: "/class", component: ClassList},
+    { path: "/classes", component: ClassList},
     { path: "/export", component: ExportPage},
     { path: "/class/:id", component: ClassDetails, props: true},
     // { path: "/class", component: ClassList, props: true},
