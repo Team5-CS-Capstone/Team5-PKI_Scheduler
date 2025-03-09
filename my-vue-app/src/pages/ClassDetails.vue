@@ -1,22 +1,29 @@
 <template>
     <span class=" text-black text-2xl font-semibold mb-4 text-start"></span>
-    <div class="flex flex-col space-y-4 text-black text-start h-full">
+    <div class="flex flex-col space-y-4 text-black text-start h-full pl-6">
         <!-- Display class details when data is available -->
         <div v-if="classData">
-            <p class="text-4xl font-bold mb-10 text-red"> {{ classData.courseName }}</p>
-            <h2 class="text-2xl font-semibold">{{ classData.name }}</h2>
-            <p><strong>Term:</strong> {{ classData.term }}</p>
-            <p><strong>Section:</strong> {{ classData.section }}</p>
-            <p><strong>Room:</strong> {{ classData.room }}</p>
-            <p><strong>Time:</strong> {{ classData.time }}</p>
-            <p><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{ classData.maxEnrollment }}</p>
+            <p class="text-5xl font-bold mb-10"
+            style="color: red;"> {{ classData.courseName }}</p>
+            <h2 class="text-3xl">{{ classData.name }}</h2>
+            <p class="text-2xl"><strong>Term:</strong> {{ classData.term }}</p>
+            <p class="text-2xl"><strong>Section:</strong> {{ classData.section }}</p>
+            <p class="text-2xl"><strong>Room:</strong> {{ classData.room }}</p>
+            <p class="text-2xl"><strong>Time:</strong> {{ classData.time }}</p>
+            <p class="text-2xl"><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{ classData.maxEnrollment }}</p>
         </div>
 
         <!-- Error state -->
         <div v-else>
             <p class="text-red-600">Class not found.</p>
         </div>
+
+        <div class="flex justify-between w-96 space-x-4">
+            <button class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl">Add Student</button>
+            <button class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl">Remove Student</button>
+        </div>
     </div>
+
 </template>
 
 <script setup>
@@ -34,6 +41,15 @@ const fetchClassDetails = async () => {
     } catch (error) {
         classData.value = null;
     }
+};
+
+const addStudent = async () => {
+    // Add student to class
+    
+};
+
+const removeStudent = async () => {
+    // Remove student from class
 };
 
 // Load data when component mounts
