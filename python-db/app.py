@@ -11,11 +11,14 @@ import os
 # pandas → CSV parsing
 
 app = Flask(__name__)
-# Allow frontend requests using CORS
-CORS(app)  
+# Allow frontend requests using CORS from any origin
+CORS(app, supports_credentials=True)
 
 # Our SQLite database file
 DB_FILE = "database.db"
+# Document Uploads file
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
 @app.route("/classes", methods=["GET"])
 def get_classes():
@@ -66,6 +69,21 @@ def get_class(class_id):
     else:
         # otherwise provide a 404 error and message along with it 
         return jsonify({"message": "Class not found"}), 404
+
+# API Route to receive and handle CSV importing
+@app.route('/upload', methods=['POST'])
+def upload_file():
+
+    # check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    
+    file = request.files['file']
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)  # Save file in uploads folder
+
+    return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
+
     
 # Start the Flask Server
 if __name__ == "__main__":

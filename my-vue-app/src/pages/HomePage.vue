@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import axios from 'axios' 
 
 const errorMessage = ref('')
 const fileInput = ref(null)
@@ -9,8 +10,28 @@ const openFilePicker = () => {
   fileInput.value.click()
 }
 
+// Send CSV File to Flask Backend
+const uploadCSV = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file)  // Append file to formData
+
+  try {
+    // Connect with the API post endpoint
+    const response = await axios.post('http://localhost:5000/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+  })
+    console.log('Upload Successful:', response.data)
+    alert("File uploaded successfully!") 
+
+  } catch (error) {
+    console.error('Upload Error:', error)
+    errorMessage.value = 'Failed to upload the file.'
+  }
+
+}
+
 // Handle File Import
-const handleFileUpload = (e) => {
+const handleFileUpload = async (e) => {
   const file = e.target.files[0] // Get the selected file
 
   if (file) {
@@ -19,9 +40,10 @@ const handleFileUpload = (e) => {
       return
     }
 
-    // Read and process the CSV
-    // readCSV(file)
+    // Process and send the CSV to the backend
+    await uploadCSV(file)
   }
+
 }
 
 </script>
