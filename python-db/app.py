@@ -68,6 +68,23 @@ def get_class(class_id):
         # otherwise provide a 404 error and message along with it 
         return jsonify({"message": "Class not found"}), 404
     
+@app.route("/export")
+def export_to_csv():
+    conn = sqlite3.connect(DB_FILE)
+    # check to make sure the connection worked
+    # likely will remove this later. I'm thinking we disable the button if theres no database/problems if possible
+    try:
+        cursor = conn.cursor()
+    
+        # overwrite the csv file with new data
+        with open("output.txt", "w", encoding="utf-8") as out_file:
+            out_file.write("test")
+
+        print("Done writing data")
+    except Exception:
+        return jsonify("No database exists :(")
+    return jsonify('Successfully exported data to file'), 200
+    
 # Start the Flask Server
 if __name__ == "__main__":
     app.run(debug=True)
