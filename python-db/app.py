@@ -3,6 +3,7 @@ from flask_cors import CORS
 import sqlite3
 import pandas as pd
 import os
+import csv
 
 # Little overview of the imports above (uses):
 # flask → Web framework
@@ -83,9 +84,138 @@ def upload_file():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
+    # Parse CSV file
+    try:
+        create_tables() # Create the tables in the database
+        course_data = parse_csv(file_path)  # Parse the CSV file
+        insert_csv_into_table(course_data) # Insert the parsed data into the database
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
+def create_tables():
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    cursor = conn.cursor()
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # Drop the 'classes' table if it exists
+    cursor.execute("DROP TABLE IF EXISTS classes")
+
+    # Now, create the 'classes' table
+    cursor.execute("""
+        CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT,
+            course_number TEXT,
+            section TEXT,
+            course_title TEXT,
+            room TEXT,
+            meeting_pattern TEXT,
+            enrollment INTEGER,
+            max_enrollment INTEGER
+        )
+    """)
+
+    conn.commit()  # Save changes
+    conn.close()
+
+
+def insert_csv_into_table(course_data):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # for entry in course_data:
+    for entry in course_data:
+        cursor.execute("""
+            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
+                int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+
+    conn.commit()
+    conn.close()
+
+    print("Data should now properly be inserted into the database from the csv file")
+
+
+def parse_csv(csv_document):
+    course_data = []
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+
+    # Read and process csv file
+    with open(csv_document, mode='r', encoding='utf-8') as infile:
+        reader = csv.reader(infile)
+
+        # Skip first two lines (extra headers)
+        next(reader)
+        next(reader)
+
+        # Read the actual headers
+        headers = next(reader)
+
+        # Get the indexes of the relevant columns
+        col_indexes = {col: headers.index(col) for col in relevant_columns}
+
+        # Read and store rows as dictionaries
+        for row in reader:
+            # Ensure row has enough columns before storing
+            if len(row) >= max(col_indexes.values()) + 1:
+                # appends information into a list of 
+                # dictionaries per class entry
+                course_data.append({
+                    "Term": row[col_indexes["Term"]],
+                    "Course": row[col_indexes["Course"]],
+                    "Section #": row[col_indexes["Section #"]],
+                    "Course Title": row[col_indexes["Course Title"]],
+                    "Room": row[col_indexes["Room"]],
+                    "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
+                    "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
+                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]])
+                })
     
+    # Returns a list of dicts (one dict per class entry)
+    return course_data
+
+        
+# API Route to update enrollment for a class
+@app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
+def update_enrollment(class_id):
+    data = request.get_json()
+    action = data.get("action")
+
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    cursor = conn.cursor()
+    cursor.execute("SELECT enrollment, max_enrollment FROM classes WHERE id = ?", (class_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({"message": "Class not found"}), 404
+    
+    enrollment, max_enrollment = row
+
+    if action == "add":
+        if enrollment < max_enrollment:
+            enrollment += 1
+        else:
+            conn.close()
+            return jsonify({"message": "Class is full"}),
+    elif action == "remove":
+        if enrollment > 0:
+            enrollment -= 1
+        else:
+            conn.close()
+            return jsonify({"message": "Class is empty"}), 400
+        
+    cursor.execute("UPDATE classes SET enrollment = ? WHERE id = ?", (enrollment, class_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"enrollment": enrollment}), 200
+
 # Start the Flask Server
 if __name__ == "__main__":
     app.run(debug=True)

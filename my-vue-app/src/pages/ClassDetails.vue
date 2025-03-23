@@ -19,8 +19,8 @@
         </div>
 
         <div class="flex justify-between w-96 space-x-4">
-            <button class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl">Add Student</button>
-            <button class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl">Remove Student</button>
+            <button @click="updateEnrollment('add')" class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl">Add Student</button>
+            <button @click="updateEnrollment('remove')" class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl">Remove Student</button>
         </div>
     </div>
 
@@ -43,13 +43,15 @@ const fetchClassDetails = async () => {
     }
 };
 
-const addStudent = async () => {
-    // Add student to class
-    
-};
-
-const removeStudent = async () => {
-    // Remove student from class
+// Update enrollment of an individual class (add or remove student)
+const updateEnrollment = async (action) => {
+    try {
+        const response = await axios.post(`http://127.0.0.1:5000/class/${route.params.id}/update-enrollment`, { action: action });
+        // Fetch updated class details
+        fetchClassDetails();
+    } catch (error) {
+        console.error(error);
+    }
 };
 
 // Load data when component mounts
