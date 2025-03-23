@@ -12,7 +12,7 @@
             />
         </div>
         <!-- Grid for clickable classes -->
-        <div v-if="filteredCourses.length > 0" class="flex grid grid-cols-8 gap-4 mt-24 m-8">
+        <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid grid-cols-8 gap-4 mt-24 m-8">
             <router-link
             v-for="course in filteredCourses"
             :key="course.id"
@@ -27,7 +27,7 @@
         </div>
 
         <div v-else>
-            <p class="text-red-600">No classes found.</p>
+            <p class="mt-20 py-2 font-semibold bg-red-300  ">No classes found.</p>
         </div>
     </div>
 
@@ -66,6 +66,7 @@ const fetchCourses = async () => {
         searchCourses();
     } catch (error) {
         courses.value = null;
+        filteredCourses.value = null;
     }
 }
 
