@@ -77,6 +77,8 @@ Example of an endpoint that takes in a parameter for class ID below:
 |--------------------|-----------|---------------------------------------|
 | `/classes`        | `GET`      | Fetch all class details               |
 | `/class/<id>`     | `GET`      | Fetch a single class by ID            |
+| `/class/<id>/update-enrollment` | `PUT` | Fetch a single class by ID and update its enrollment accordingly|
+| `/upload`     | `PUT`      | Receives and handles CSV importing to the database |
 
 
 ## SQLite Database Installation/Recommendations 
