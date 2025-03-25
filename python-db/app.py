@@ -82,9 +82,9 @@ def upload_file():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
+    global file_path # making this global so it can be used in the export function
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
-    imported_file = file_path
 
     # Parse CSV file
     try:
@@ -227,16 +227,10 @@ def export_to_csv():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM classes")
 
-        # currently I'm relying on the input csv file to read all the excess data from to make a perfect copy of the file, with the changes that were made
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        repo_root = os.path.abspath(os.path.join(script_dir, "../../"))  # Adjust if needed
-        data_dir = os.path.join(repo_root, "Team5-PKI_Scheduler\\my-vue-app\\")
-        input_file = os.path.join(data_dir, "Spring2023.csv")
-
         # the idea here is to go line by line and copy each line into a list. 
         # if there's something in the first list, process depending on where it is (date, class name, etc.)
         # if not, process new student count (since data lines have their first csv data empty)
-        with open(input_file, "r", encoding="utf-8") as in_file:
+        with open(file_path, "r", encoding="utf-8") as in_file:
             reader = csv.reader(in_file)
 
             # start overwriting the csv file. start with writing the date
