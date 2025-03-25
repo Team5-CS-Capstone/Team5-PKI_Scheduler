@@ -13,11 +13,14 @@ import datetime
 # pandas → CSV parsing
 
 app = Flask(__name__)
-# Allow frontend requests using CORS
-CORS(app)  
+# Allow frontend requests using CORS from any origin
+CORS(app, supports_credentials=True)
 
 # Our SQLite database file
 DB_FILE = "database.db"
+# Document Uploads file
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
 @app.route("/classes", methods=["GET"])
 def get_classes():
@@ -69,7 +72,152 @@ def get_class(class_id):
     else:
         # otherwise provide a 404 error and message along with it 
         return jsonify({"message": "Class not found"}), 404
+
+# API Route to receive and handle CSV importing
+@app.route('/upload', methods=['POST'])
+def upload_file():
+
+    # check if file was uploaded
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
     
+    file = request.files['file']
+    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file.save(file_path)  # Save file in uploads folder
+    imported_file = file_path
+
+    # Parse CSV file
+    try:
+        create_tables() # Create the tables in the database
+        course_data = parse_csv(file_path)  # Parse the CSV file
+        insert_csv_into_table(course_data) # Insert the parsed data into the database
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    
+    return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
+
+def create_tables():
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    cursor = conn.cursor()
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # Drop the 'classes' table if it exists
+    cursor.execute("DROP TABLE IF EXISTS classes")
+
+    # Now, create the 'classes' table
+    cursor.execute("""
+        CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT,
+            course_number TEXT,
+            section TEXT,
+            course_title TEXT,
+            room TEXT,
+            meeting_pattern TEXT,
+            enrollment INTEGER,
+            max_enrollment INTEGER
+        )
+    """)
+
+    conn.commit()  # Save changes
+    conn.close()
+
+
+def insert_csv_into_table(course_data):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # for entry in course_data:
+    for entry in course_data:
+        cursor.execute("""
+            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
+                int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+
+    conn.commit()
+    conn.close()
+
+    print("Data should now properly be inserted into the database from the csv file")
+
+
+def parse_csv(csv_document):
+    course_data = []
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+
+    # Read and process csv file
+    with open(csv_document, mode='r', encoding='utf-8') as infile:
+        reader = csv.reader(infile)
+
+        # Skip first two lines (extra headers)
+        next(reader)
+        next(reader)
+
+        # Read the actual headers
+        headers = next(reader)
+
+        # Get the indexes of the relevant columns
+        col_indexes = {col: headers.index(col) for col in relevant_columns}
+
+        # Read and store rows as dictionaries
+        for row in reader:
+            # Ensure row has enough columns before storing
+            if len(row) >= max(col_indexes.values()) + 1:
+                # appends information into a list of 
+                # dictionaries per class entry
+                course_data.append({
+                    "Term": row[col_indexes["Term"]],
+                    "Course": row[col_indexes["Course"]],
+                    "Section #": row[col_indexes["Section #"]],
+                    "Course Title": row[col_indexes["Course Title"]],
+                    "Room": row[col_indexes["Room"]],
+                    "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
+                    "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
+                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]])
+                })
+    
+    # Returns a list of dicts (one dict per class entry)
+    return course_data
+
+        
+# API Route to update enrollment for a class
+@app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
+def update_enrollment(class_id):
+    data = request.get_json()
+    action = data.get("action")
+
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    cursor = conn.cursor()
+    cursor.execute("SELECT enrollment, max_enrollment FROM classes WHERE id = ?", (class_id,))
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        return jsonify({"message": "Class not found"}), 404
+    
+    enrollment, max_enrollment = row
+
+    if action == "add":
+        if enrollment < max_enrollment:
+            enrollment += 1
+        else:
+            conn.close()
+            return jsonify({"message": "Class is full"}),
+    elif action == "remove":
+        if enrollment > 0:
+            enrollment -= 1
+        else:
+            conn.close()
+            return jsonify({"message": "Class is empty"}), 400
+        
+    cursor.execute("UPDATE classes SET enrollment = ? WHERE id = ?", (enrollment, class_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"enrollment": enrollment}), 200
+
 @app.route("/export")
 def export_to_csv():
     conn = sqlite3.connect(DB_FILE)
@@ -79,15 +227,14 @@ def export_to_csv():
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM classes")
 
-        # CHANGE THIS WHEN THE IMPORT BUTTON WORKS - COPIED FROM import_csv_to_table.py
         # currently I'm relying on the input csv file to read all the excess data from to make a perfect copy of the file, with the changes that were made
         script_dir = os.path.dirname(os.path.abspath(__file__))
         repo_root = os.path.abspath(os.path.join(script_dir, "../../"))  # Adjust if needed
         data_dir = os.path.join(repo_root, "Team5-PKI_Scheduler\\my-vue-app\\")
         input_file = os.path.join(data_dir, "Spring2023.csv")
 
-        # the idea here is to go line by line
-        # copy each line into a list. if there's something in the first list, process depending on where it is (date, class name, etc.)
+        # the idea here is to go line by line and copy each line into a list. 
+        # if there's something in the first list, process depending on where it is (date, class name, etc.)
         # if not, process new student count (since data lines have their first csv data empty)
         with open(input_file, "r", encoding="utf-8") as in_file:
             reader = csv.reader(in_file)
@@ -117,7 +264,7 @@ def export_to_csv():
                 writer.writerow(data) # write headers 
 
             # start writing in all the new data
-            id = 1
+            id = 1 # this is assuming we don't delete or rearrange class IDs
             for row in reader:
                 if len(row) > 1: # process new data
                     with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
@@ -136,22 +283,11 @@ def export_to_csv():
                         writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
                         writer.writerow(row)
 
-        print("done writing :)")
-
-        # # clear the output csv file
-        # # overwrite the csv file with new data? create a new file with just the data from the database, then merge the two?
-        # with open("output.csv", "w", newline = '', encoding="utf-8") as out_file:
-        #     writer = csv.writer(out_file)
-        #     # out_file.write("\"Fall 2025\"\n\"Generated DATE, TIME\"\n,")
-        #     # writer.writerow(headers)
-        #     for row in cursor.fetchall():
-        #         writer.writerow(row[1:]) # Don't need ID
-
-        # READ THROUGH THE INPUT. GO LINE BY LINE. IF AFTER READING A LINE THERES SOMETHING IN THE FIRST CELL, DO SOMETHING (just print?) OTHERWISE PROCESS
     except Exception:
-        return jsonify("No database exists :("), 404
+        return jsonify("No database exists"), 404
     finally:
         conn.close()
+    print("Successfully exported data to file")
     return jsonify('Successfully exported data to file'), 200
     
 # Start the Flask Server
