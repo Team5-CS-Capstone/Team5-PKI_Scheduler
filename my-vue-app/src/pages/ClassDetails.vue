@@ -34,6 +34,13 @@ import axios from "axios";
 const classData = ref(null);
 const route = useRoute();
 
+/**
+ * @function fetchClassDetails
+ * @description 
+ *  Accesses a specific API endpoint using the class ID from the URL,
+ *  retrieves all data for that class from the database, and stores it
+ *  in the `classData` reactive variable.
+ */
 const fetchClassDetails = async () => {
     try {
         const response = await axios.get(`http://127.0.0.1:5000/class/${route.params.id}`);
@@ -43,7 +50,18 @@ const fetchClassDetails = async () => {
     }
 };
 
-// Update enrollment of an individual class (add or remove student)
+/**
+ * @function updateEnrollment
+ * @description 
+ *  Uses the provided `action` (e.g. "add" or "remove") to update
+ *  the enrollment number of a specific class (just how many students
+ *  are enrolled, since we have no access to live data..)
+ * @param {string} action 
+ *  The action type for enrollment, either "add" or "remove".
+ * @returns {void}
+ *  A promise that resolves once the enrollment is updated and
+ *  `fetchClassDetails` is re-called to refresh data.
+ */
 const updateEnrollment = async (action) => {
     try {
         const response = await axios.post(`http://127.0.0.1:5000/class/${route.params.id}/update-enrollment`, { action: action });
