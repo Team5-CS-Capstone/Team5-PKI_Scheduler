@@ -95,6 +95,9 @@ sqlite3 database.db
 Then regular SQL syntax can be used to run commands on the db e.g. (select * from <table_name>) \
 SQLite viewer extension for VS Code is also very useful (allows you to open .db files in SQLite form)
 
+## Branching Strategy
+Our branching strategy is very simple: each user has their branch which they push to, and when they are ready to share their changes to others they make a pull request with their changes, pushing the contents into the dev branch. When the dev branch has significant progress, typically when the group meets we merge all of the contents from dev into main (the master branch of this application).
+
 ## Release Notes
 #### Milestone #1:
 - The design idea was completed in Figma
