@@ -108,10 +108,6 @@ def upload_file():
 
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
-    global file_path # making this global so it can be used in the export function
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)  # Save file in uploads folder
-
     # Parse CSV file
     try:
         create_tables() # Create the tables in the database
