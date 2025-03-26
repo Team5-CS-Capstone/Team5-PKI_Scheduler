@@ -105,3 +105,16 @@ SQLite viewer extension for VS Code is also very useful (allows you to open .db 
 - The CSV files themselves are stored within the top level of  the my-vue-app folder.
 - Re-usable component implemented for the sidebar navigation
 - The implementation of a basic algorithm was unable to be implemented this algorithm as we first will need a connection between our frontend/backend which will be the focus of our next milestone
+
+
+#### Milestone #2:
+- Backend --> Front-end connection made through app.py
+-   API endpoint created for classes
+-   API endpoint created for class details, and for updating enrollment
+-   API endpoint created for upload
+-   API endpoint created for classes
+-   API endpoint created for export
+-   File picker for upload created, uses previous workflow to populate database
+-   Search feature for classes page implemented
+-   Some minor documentation created
+-   Overshot on github actions as tests haven't been created just yet
