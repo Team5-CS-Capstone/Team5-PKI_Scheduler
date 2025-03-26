@@ -268,7 +268,6 @@ def export_to_csv():
     # likely will remove this later. I'm thinking we disable the button if theres no database/problems if possible
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM classes")
 
         # the idea here is to go line by line and copy each line into a list. 
         # if there's something in the first list, process depending on where it is (date, class name, etc.)
@@ -309,7 +308,8 @@ def export_to_csv():
 
                         # data is whatever's in the input csv file
                         data = row
-                        new_enrollment_count = cursor.execute("SELECT enrollment FROM classes WHERE id = ?", (id,))
+                        cursor.execute("SELECT enrollment FROM classes WHERE id = ?", (id,))
+                        new_enrollment_count = cursor.fetchall()[0][0]
                         data[0] = None # so it doesn't get quoted in the csv file
                         data[28] = new_enrollment_count # 28 is the index of the current enrollment count. if there's a more dynamic way to do this in case the data format changes, let's do that instead
 
