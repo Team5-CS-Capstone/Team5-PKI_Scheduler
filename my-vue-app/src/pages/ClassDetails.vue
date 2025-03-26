@@ -19,8 +19,8 @@
         </div>
 
         <div class="flex justify-between w-96 space-x-4">
-            <button @click="updateEnrollment('add')" class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl">Add Student</button>
-            <button @click="updateEnrollment('remove')" class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl">Remove Student</button>
+            <button @click="updateEnrollment('add')" class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add Student</button>
+            <button @click="updateEnrollment('remove')" class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove Student</button>
         </div>
     </div>
 
