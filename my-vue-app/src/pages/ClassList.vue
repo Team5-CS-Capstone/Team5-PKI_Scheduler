@@ -12,7 +12,7 @@
             />
         </div>
         <!-- Grid for clickable classes -->
-        <div v-if="filteredCourses.length > 0" class="flex grid grid-cols-8 gap-4 mt-24 m-8">
+        <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid grid-cols-8 gap-4 mt-24 m-8">
             <router-link
             v-for="course in filteredCourses"
             :key="course.id"
@@ -27,7 +27,7 @@
         </div>
 
         <div v-else>
-            <p class="text-red-600">No classes found.</p>
+            <p class="mt-20 py-2 font-semibold bg-red-300  ">No classes found.</p>
         </div>
     </div>
 
@@ -48,6 +48,18 @@ const search = ref("")
 // if there happens to be a search
 const filteredCourses = ref([])
 
+/**
+ * @function searchCourses
+ * @description 
+ *  If the value of search is populated (from the UI by user) then
+ *  set filteredCourses to whatever classes from all courses (from db)
+ *  include whatever is in the search string (lowercased). If the search is
+ *  empty filteredCourses contains all courses, otherwise it contains
+ *  filtered courses.  
+ * @returns {void}
+ *  Returns nothing but it updates filteredCourses which then updates the 
+ *  UI accordingly
+ */
 const searchCourses = async () => {
     if (search.value === "") {
         filteredCourses.value = courses.value;
@@ -59,6 +71,14 @@ const searchCourses = async () => {
     }
 }
 
+/**
+ * @function fetchCourses
+ * @description 
+ *  Fetches a list of all available courses from the backend and updates 
+ *  the reactive `courses` variable. Also triggers the search filter by calling 
+ *  `searchCourses()`. If an error occurs, `courses` and `filteredCourses` are 
+ *  set to `null` and the UI displays this accordingly.
+ */
 const fetchCourses = async () => {
     try {
         const response = await axios.get('http://127.0.0.1:5000/classes');
@@ -66,9 +86,12 @@ const fetchCourses = async () => {
         searchCourses();
     } catch (error) {
         courses.value = null;
+        filteredCourses.value = null;
     }
 }
 
+// After the component renders, fetch courses and 
+// update the UI accordingly
 onMounted(() => {
     fetchCourses();
 });

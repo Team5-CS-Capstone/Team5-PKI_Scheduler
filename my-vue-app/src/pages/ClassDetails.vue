@@ -19,8 +19,8 @@
         </div>
 
         <div class="flex justify-between w-96 space-x-4">
-            <button class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl">Add Student</button>
-            <button class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl">Remove Student</button>
+            <button @click="updateEnrollment('add')" class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add Student</button>
+            <button @click="updateEnrollment('remove')" class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove Student</button>
         </div>
     </div>
 
@@ -34,6 +34,13 @@ import axios from "axios";
 const classData = ref(null);
 const route = useRoute();
 
+/**
+ * @function fetchClassDetails
+ * @description 
+ *  Accesses a specific API endpoint using the class ID from the URL,
+ *  retrieves all data for that class from the database, and stores it
+ *  in the `classData` reactive variable.
+ */
 const fetchClassDetails = async () => {
     try {
         const response = await axios.get(`http://127.0.0.1:5000/class/${route.params.id}`);
@@ -43,13 +50,26 @@ const fetchClassDetails = async () => {
     }
 };
 
-const addStudent = async () => {
-    // Add student to class
-    
-};
-
-const removeStudent = async () => {
-    // Remove student from class
+/**
+ * @function updateEnrollment
+ * @description 
+ *  Uses the provided `action` (e.g. "add" or "remove") to update
+ *  the enrollment number of a specific class (just how many students
+ *  are enrolled, since we have no access to live data..)
+ * @param {string} action 
+ *  The action type for enrollment, either "add" or "remove".
+ * @returns {void}
+ *  A promise that resolves once the enrollment is updated and
+ *  `fetchClassDetails` is re-called to refresh data.
+ */
+const updateEnrollment = async (action) => {
+    try {
+        const response = await axios.post(`http://127.0.0.1:5000/class/${route.params.id}/update-enrollment`, { action: action });
+        // Fetch updated class details
+        fetchClassDetails();
+    } catch (error) {
+        console.error(error);
+    }
 };
 
 // Load data when component mounts
