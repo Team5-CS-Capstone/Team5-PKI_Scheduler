@@ -103,9 +103,10 @@ def upload_file():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
-    global file_path # making this global so it can be used in the export function
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
+
+    return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
     # Parse CSV file
     try:

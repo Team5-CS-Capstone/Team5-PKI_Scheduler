@@ -70,6 +70,7 @@ const searchCourses = async () => {
         });
     }
 }
+
 /**
  * @function fetchCourses
  * @description 
