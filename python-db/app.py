@@ -24,6 +24,16 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
 @app.route("/classes", methods=["GET"])
 def get_classes():
+    """
+    @brief This API endpoint function retrieves a list of classes from the database
+
+    A connection to the SQLite database is made, and all records are fetched
+    from the classes table, id, section, course_number, and course_title are the attributes
+    that are selected and they're returned into a JSON array
+
+    @return A JSON response that contains the list of class objects and a successful
+            HTTP status code is returned.
+    """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
@@ -47,6 +57,17 @@ def get_classes():
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
 def get_class(class_id):
+    """
+    @brief This API endpoint function retrieves information on one class using a specific ID
+
+    @param class_id parameter used to fetch details of a specific class from the db
+
+    @return A JSON response that could contain two possible responses
+            200: If a class is found with the specific ID the individual
+                classes data is returned along with successful HTTP response (200).
+            404: If no class is found with the specific ID a message "Class not found"
+                and a 404 error is returned as well.
+    """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
@@ -185,6 +206,28 @@ def parse_csv(csv_document):
 # API Route to update enrollment for a class
 @app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
 def update_enrollment(class_id):
+    """
+    @brief This API endpoint function retrieves information on a specific class and updates its 
+            enrollment 
+
+            The action is stated in the API call in the front end and is taken in by the backend
+            and depending on the action (add or remove) the enrollment number of this specific 
+            class is incremented or decremented and if successful the new enrollment is returned
+            along with a 200 HTTP response
+
+            If the enrollment is over its max it shouldn't be added to so an error occurs and is 
+            returned.
+            If the enrollment is 0 it shouldn't be removed from so an error occurs and is returned.
+
+    @param class_id parameter used to fetch details of a specific class from the db and update
+            them accordingly
+
+    @return A JSON response that could contain two possible responses
+            200: If a class is found with the specific ID the individual
+                classes data is returned along with successful HTTP response (200).
+            404: If no class is found with the specific ID a message "Class not found"
+                and a 404 error is returned as well.
+    """
     data = request.get_json()
     action = data.get("action")
 

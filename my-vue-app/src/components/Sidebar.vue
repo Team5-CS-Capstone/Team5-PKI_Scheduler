@@ -1,3 +1,16 @@
+<!--
+  @file
+  @brief Displays the main navigation sidebar.
+  
+  This component provides RouterLinks to:
+    - Home Page
+    - Classes Page
+    - CSV Export Page
+  
+  Each link includes an icon and points to a distinct route.
+  Also this component is reused in every page throughout the application
+  as of now rather than using a section outlet or something of that sort
+-->
 <template>
     <div class="flex flex-col space-y-3 p-4 bg-gray-200">
 
