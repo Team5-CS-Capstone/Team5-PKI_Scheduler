@@ -49,16 +49,11 @@ const search = ref("")
 const filteredCourses = ref([])
 
 /**
+ * Filters the list of courses based on user search input.
+ * Updates the `filteredCourses` reactive variable.
+ *
  * @function searchCourses
- * @description 
- *  If the value of search is populated (from the UI by user) then
- *  set filteredCourses to whatever classes from all courses (from db)
- *  include whatever is in the search string (lowercased). If the search is
- *  empty filteredCourses contains all courses, otherwise it contains
- *  filtered courses.  
- * @returns {void}
- *  Returns nothing but it updates filteredCourses which then updates the 
- *  UI accordingly
+ * @returns {void} Updates `filteredCourses` based on search value.
  */
 const searchCourses = async () => {
     if (search.value === "") {
@@ -70,13 +65,14 @@ const searchCourses = async () => {
         });
     }
 }
+
 /**
+ * Fetches all available courses from the backend and stores them in the reactive variable `courses`.
+ * Triggers filtering afterward.
+ *
  * @function fetchCourses
- * @description 
- *  Fetches a list of all available courses from the backend and updates 
- *  the reactive `courses` variable. Also triggers the search filter by calling 
- *  `searchCourses()`. If an error occurs, `courses` and `filteredCourses` are 
- *  set to `null` and the UI displays this accordingly.
+ * @async
+ * @returns {Promise<void>} Updates `courses` and `filteredCourses`.
  */
 const fetchCourses = async () => {
     try {
