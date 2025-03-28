@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>import_csv_to_table &#8212; PKI Scheduler - Team 5 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for import_csv_to_table</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="c1"># Create the SQLite table for storing this parsed information</span>
+<div class="viewcode-block" id="create_table">
+<a class="viewcode-back" href="../import_csv_to_table.html#import_csv_to_table.create_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_table</span><span class="p">():</span>
+    <span class="c1"># Creation of connection to the DB</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+    <span class="c1"># cursor is needed in order to execute SQLite commands</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># Create the &#39;classes&#39; table if it doesn&#39;t exist</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE IF NOT EXISTS classes (</span>
+<span class="s2">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">            term TEXT,</span>
+<span class="s2">            course_number TEXT,</span>
+<span class="s2">            section TEXT,</span>
+<span class="s2">            course_title TEXT,</span>
+<span class="s2">            room TEXT,</span>
+<span class="s2">            meeting_pattern TEXT,</span>
+<span class="s2">            enrollment INTEGER,</span>
+<span class="s2">            max_enrollment INTEGER</span>
+<span class="s2">        )</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>  <span class="c1"># Save changes</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>   <span class="c1"># Close the connection</span></div>
+
+
+
+<div class="viewcode-block" id="insert_csv_into_table">
+<a class="viewcode-back" href="../import_csv_to_table.html#import_csv_to_table.insert_csv_into_table">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">insert_csv_into_table</span><span class="p">(</span><span class="n">course_data</span><span class="p">):</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># for entry in course_data:</span>
+    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">course_data</span><span class="p">:</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)</span>
+<span class="s2">            VALUES (?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Term&#39;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Course&#39;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Section #&#39;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Course Title&#39;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Room&#39;</span><span class="p">],</span> <span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Meeting Pattern&#39;</span><span class="p">],</span> 
+                <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Enrollment&#39;</span><span class="p">]),</span> <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s1">&#39;Maximum Enrollment&#39;</span><span class="p">])))</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data should now properly be inserted into the database from the csv file&quot;</span><span class="p">)</span></div>
+
+
+<span class="c1"># Somehow here we will provide the parameter with the proper csv </span>
+<span class="c1"># document that we want to parse from the frontend on import click</span>
+<span class="c1"># and we can later create another function for the </span>
+<span class="c1"># exporting of csv files in proper format and just call that from</span>
+<span class="c1"># the front end</span>
+<div class="viewcode-block" id="parse_csv">
+<a class="viewcode-back" href="../import_csv_to_table.html#import_csv_to_table.parse_csv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_csv</span><span class="p">(</span><span class="n">csv_document</span><span class="p">):</span>
+    <span class="n">course_data</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Read and process csv file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">infile</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">infile</span><span class="p">)</span>
+
+        <span class="c1"># Skip first two lines (extra headers)</span>
+        <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+        <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+
+        <span class="c1"># Read the actual headers</span>
+        <span class="n">headers</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
+
+        <span class="c1"># Get the indexes of the relevant columns</span>
+        <span class="n">col_indexes</span> <span class="o">=</span> <span class="p">{</span><span class="n">col</span><span class="p">:</span> <span class="n">headers</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">col</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">relevant_columns</span><span class="p">}</span>
+
+        <span class="c1"># Read and store rows as dictionaries</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="c1"># Ensure row has enough columns before storing</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="nb">max</span><span class="p">(</span><span class="n">col_indexes</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># appends information into a list of </span>
+                <span class="c1"># dictionaries per class entry</span>
+                <span class="n">course_data</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;Term&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Term&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Course&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Course&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Section #&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Section #&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Course Title&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Course Title&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Room&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Room&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">]],</span>
+                    <span class="s2">&quot;Enrollment&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Enrollment&quot;</span><span class="p">]]),</span>  <span class="c1"># Convert to int</span>
+                    <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">]])</span>
+                <span class="p">})</span>
+    
+    <span class="c1"># Returns a list of dicts (one dict per class entry)</span>
+    <span class="k">return</span> <span class="n">course_data</span></div>
+
+
+<span class="c1"># Print all lists</span>
+<span class="c1"># for key, values in course_data.items():</span>
+<span class="c1">#     print(f&quot;{key}:&quot;)</span>
+<span class="c1">#     for value in values:</span>
+<span class="c1">#         print(f&quot;{value}&quot;)</span>
+
+<span class="c1"># # Print each dictionary item one at a time</span>
+<span class="c1"># for i in range(len(term_list)):</span>
+<span class="c1">#     # Creates a dictionary for each course_data entry  </span>
+<span class="c1">#     entry = {key: values[i] for key, values in course_data.items()}</span>
+<span class="c1">#     print(entry)  </span>
+
+<span class="c1"># #Instructions:</span>
+<span class="c1"># # WSL - sudo apt install sqlite3</span>
+
+<span class="c1"># # connect to the database via the conenct command, specify db name</span>
+<span class="c1"># main_database = sqlite3.connect(&quot;test.db&quot;)</span>
+<span class="c1"># # set up a cursor for executing commands </span>
+<span class="c1"># cursor = main_database.cursor()</span>
+
+<span class="c1"># # provide the command and execute it </span>
+<span class="c1"># cursor.execute(&quot;SELECT * from test&quot;)</span>
+
+<span class="c1"># # fetch result and loop to print all the rows in the table</span>
+<span class="c1"># db_rows = cursor.fetchall()</span>
+<span class="c1"># for i in db_rows:</span>
+<span class="c1">#     print(i)</span>
+
+<span class="c1"># # close connection</span>
+<span class="c1"># main_database.close()</span>
+
+<span class="c1"># Start of script</span>
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c1"># Get the directory where the script is running</span>
+    <span class="n">script_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+
+    <span class="c1"># Navigate up to the repository root (assuming script is inside the repo)</span>
+    <span class="n">repo_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">script_dir</span><span class="p">,</span> <span class="s2">&quot;../../&quot;</span><span class="p">))</span>  <span class="c1"># Adjust if needed</span>
+
+    <span class="c1"># Define the relative path to the data file inside the repo</span>
+    <span class="n">data_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">repo_root</span><span class="p">,</span> <span class="s2">&quot;Team5-PKI_Scheduler</span><span class="se">\\</span><span class="s2">my-vue-app</span><span class="se">\\</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">input_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;Spring2023.csv&quot;</span><span class="p">)</span>
+
+    <span class="n">DB_FILE</span> <span class="o">=</span> <span class="s2">&quot;database.db&quot;</span>
+
+    <span class="c1"># Define the relevant columns we need</span>
+    <span class="n">relevant_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Term&quot;</span><span class="p">,</span> <span class="s2">&quot;Course&quot;</span><span class="p">,</span> <span class="s2">&quot;Section #&quot;</span><span class="p">,</span> <span class="s2">&quot;Course Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Room&quot;</span><span class="p">,</span> <span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">,</span> <span class="s2">&quot;Enrollment&quot;</span><span class="p">,</span> <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">]</span>
+
+    <span class="c1"># Check if file exists</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;File not found: </span><span class="si">{</span><span class="n">input_file</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">create_table</span><span class="p">()</span>  <span class="c1"># Ensure database &amp; table exist</span>
+    <span class="n">course_data</span> <span class="o">=</span> <span class="n">parse_csv</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>  <span class="c1"># Parse CSV</span>
+    <span class="n">insert_csv_into_table</span><span class="p">(</span><span class="n">course_data</span><span class="p">)</span>  <span class="c1"># Insert into SQLite</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">PKI Scheduler - Team 5</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">python-db</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Charlie, Zaid, Brian, John, Brady.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

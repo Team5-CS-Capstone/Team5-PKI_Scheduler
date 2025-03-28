@@ -35,11 +35,12 @@ const classData = ref(null);
 const route = useRoute();
 
 /**
+ * Fetches details for a specific class using the ID from the current route.
+ * Updates the `classData` reactive variable with the fetched data or null if there's an error.
+ *
  * @function fetchClassDetails
- * @description 
- *  Accesses a specific API endpoint using the class ID from the URL,
- *  retrieves all data for that class from the database, and stores it
- *  in the `classData` reactive variable.
+ * @async
+ * @returns {Promise<void>} Resolves after setting the class data or null.
  */
 const fetchClassDetails = async () => {
     try {
@@ -51,16 +52,14 @@ const fetchClassDetails = async () => {
 };
 
 /**
+ * Sends an action to update the enrollment count for a specific class.
+ * Supports incrementing or decrementing based on the "add" or "remove" action.
+ * Refreshes the class data after updating.
+ *
  * @function updateEnrollment
- * @description 
- *  Uses the provided `action` (e.g. "add" or "remove") to update
- *  the enrollment number of a specific class (just how many students
- *  are enrolled, since we have no access to live data..)
- * @param {string} action 
- *  The action type for enrollment, either "add" or "remove".
- * @returns {void}
- *  A promise that resolves once the enrollment is updated and
- *  `fetchClassDetails` is re-called to refresh data.
+ * @async
+ * @param {"add"|"remove"} action - The type of enrollment update.
+ * @returns {Promise<void>} Resolves after the update and refetch.
  */
 const updateEnrollment = async (action) => {
     try {
