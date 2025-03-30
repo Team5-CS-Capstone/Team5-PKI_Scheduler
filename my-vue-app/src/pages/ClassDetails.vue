@@ -75,5 +75,4 @@ const updateEnrollment = async (action) => {
 onMounted(() => {
     fetchClassDetails();
 });
-
 </script>
