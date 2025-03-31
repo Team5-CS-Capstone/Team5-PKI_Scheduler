@@ -114,6 +114,7 @@ def upload_file():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
+    global file_path # make sure the file path is global so we can access it later
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
