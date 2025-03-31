@@ -117,8 +117,6 @@ def upload_file():
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
-    return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
-
     # Parse CSV file
     try:
         create_tables() # Create the tables in the database
