@@ -15,6 +15,5 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
-   app
-   import_csv_to_table
+   modules
 
