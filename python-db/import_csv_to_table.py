@@ -135,11 +135,11 @@ if __name__ == "__main__":
     # Define the relevant columns we need
     relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
 
-    '''This will check if we have a database, and clear it if needed, before update new info'''
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
+   
     # Check if file exists
-
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(f'File not found: {input_file}')
+    
     create_table()  # Ensure database & table exist
     course_data = parse_csv(input_file)  # Parse CSV
     insert_csv_into_table(course_data)  # Insert into SQLite
