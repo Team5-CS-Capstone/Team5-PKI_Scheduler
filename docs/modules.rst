@@ -6,4 +6,4 @@ python-db
 
    app
    import_csv_to_table
-   JSDoc <../jsdoc/index.html>
+   
