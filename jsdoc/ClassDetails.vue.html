@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: ClassDetails.vue</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: ClassDetails.vue</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>&lt;template>
+    &lt;span class=" text-black text-2xl font-semibold mb-4 text-start">&lt;/span>
+    &lt;div class="flex flex-col space-y-4 text-black text-start h-full pl-6">
+        &lt;!-- Display class details when data is available -->
+        &lt;div v-if="classData">
+            &lt;p class="text-5xl font-bold mb-10" style="color: red;"> {{ classData.courseName }}&lt;/p>
+            &lt;h2 class="text-3xl">{{ classData.name }}&lt;/h2>
+            &lt;p class="text-2xl">&lt;strong>Term:&lt;/strong> {{ classData.term }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Section:&lt;/strong> {{ classData.section }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Room:&lt;/strong> {{ classData.room }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Time:&lt;/strong> {{ classData.time }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Enrollment:&lt;/strong> {{ classData.currentEnrollment }} / {{
+                classData.maxEnrollment }}&lt;/p>
+        &lt;/div>
+
+        &lt;!-- Error state -->
+        &lt;div v-else>
+            &lt;p class="text-red-600">Class not found.&lt;/p>
+        &lt;/div>
+
+        &lt;div v-if="classData" class="flex justify-between w-96 space-x-4">
+            &lt;button @click="updateEnrollment('add')"
+                class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add
+                Student&lt;/button>
+            &lt;button @click="updateEnrollment('remove')"
+                class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove
+                Student&lt;/button>
+        &lt;/div>
+    &lt;/div>
+
+&lt;/template>
+
+&lt;script>
+import axios from "axios";
+
+/**
+ * ClassDetails component displays details for a specific class and allows enrollment updates.
+ */
+export default {
+    name: "ClassDetails",
+    data() {
+        return {
+            /**
+             * The class data fetched from the backend.
+             * @vue-data {Object|null}
+             */
+            classData: null,
+        };
+    },
+    methods: {
+        /**
+         * Fetches details for a specific class using the ID from the current route.
+         * Updates the `classData` reactive property with the fetched data or null if there's an error.
+         *
+         * @vue-method
+         * @async
+         * @returns {Promise&lt;void>} Resolves after setting the class data.
+         */
+        async fetchClassDetails() {
+            try {
+                const response = await axios.get(`http://127.0.0.1:5000/class/${this.$route.params.id}`);
+                this.classData = response.data;
+            } catch (error) {
+                this.classData = null;
+            }
+        },
+        /**
+         * Sends an action to update the enrollment count for the class.
+         * Supports incrementing or decrementing based on the "add" or "remove" action.
+         * Refreshes the class data after updating.
+         *
+         * @vue-method
+         * @async
+         * @param {"add"|"remove"} action - The type of enrollment update.
+         * @returns {Promise&lt;void>} Resolves after the update and refetch.
+         */
+        async updateEnrollment(action) {
+            try {
+                await axios.post(`http://127.0.0.1:5000/class/${this.$route.params.id}/update-enrollment`, { action });
+                // Fetch updated class details
+                this.fetchClassDetails();
+            } catch (error) {
+                console.error(error);
+            }
+        },
+    },
+    /**
+     * Lifecycle hook: called after the component is mounted.
+     * Triggers the initial fetch of class details.
+     */
+    mounted() {
+        this.fetchClassDetails();
+    },
+};
+&lt;/script></code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-ClassDetails.html">ClassDetails</a></li><li><a href="module-ClassList.html">ClassList</a></li></ul><h3>Global</h3><ul><li><a href="global.html#classData">classData</a></li><li><a href="global.html#courses">courses</a></li><li><a href="global.html#filteredCourses">filteredCourses</a></li><li><a href="global.html#search">search</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Apr 05 2025 01:07:40 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
