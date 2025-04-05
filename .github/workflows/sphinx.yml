@@ -40,9 +40,10 @@ jobs:
       # New step: Combine Sphinx and JSDoc outputs
       - name: Merge Documentation Outputs
         run: |
-            mkdir -p docs/_build/html  # ensure the folder exists
-            cp -R docs/jsdoc/* docs/_build/html/
-    
+          # Ensure the target directory exists in the Sphinx build output
+          mkdir -p docs/_build/html/jsdoc
+          # Copy all files from the JSDoc output folder into the Sphinx build folder
+          cp -R docs/jsdoc/* docs/_build/html/jsdoc/
 
       - name: Deploy Documentation to GitHub Pages
         run: |
