@@ -16,5 +16,5 @@ documentation for details.
    :caption: Contents:
 
    modules
-   JSDoc </jsdoc/index.html>
+   jsdoc/index.html
 
