@@ -119,6 +119,7 @@ def upload_file():
 
     # Parse CSV file
     try:
+        file_path = fix_csv(file_path) # Function call to fix the sheet for trailing commas
         create_tables() # Create the tables in the database
         course_data = parse_csv(file_path)  # Parse the CSV file
         insert_csv_into_table(course_data) # Insert the parsed data into the database
@@ -184,6 +185,22 @@ def insert_csv_into_table(course_data):
 
     print("Data should now properly be inserted into the database from the csv file")
 
+'''Function to fix the trailing commas in the csv'''
+def fix_csv(csv_document):
+    '''Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files'''
+    fixed_csv = csv_document.replace(".csv", "-fix.csv")
+    '''Open the csv doc and the output file temporarily created'''
+    with open(csv_document, 'r', newline='') as csv_to_clean, open(fixed_csv, 'w', newline='') as output_csv:
+        reader = csv.reader(csv_to_clean)
+        writer = csv.writer(output_csv)
+        '''Loop to check if the last part of the row is empty and delete appropriately'''
+        for row in reader:
+            while row and row[-1] == '':
+                row.pop()
+            writer.writerow(row)
+        '''Return fixed sheet'''
+    return fixed_csv
+    
 
 def parse_csv(csv_document):
     """
