@@ -10,23 +10,43 @@ and update the proper information
     </div>
     <div class="mt-22 text-2xl font-bold w-full flex justify-center">
         <button class="w-96 rounded-xl bg-sky-500 px-12 py-4 hover:bg-green-500 cursor-pointer" type="button"
-        @click="exportToFile">Export CSV</button>
+            @click="exportToFile">Export CSV</button>
     </div>
 </template>
 
-<script setup>
+<script>
 import axios from 'axios';
-import { ref, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
 
-const classData = ref(null);
-const route = useRoute();
-
-const exportToFile = async () => {
-    try {
-        const response = await axios.get(`http://127.0.0.1:5000/export`);
-    } catch (error) {
-        console.error('Could not export data.', error);
-    }
-}
+export default {
+    name: "ExportComponent",
+    data() {
+        return {
+            /**
+             * Data for the class (if needed).
+             * @vue-data {Object|null}
+             */
+            classData: null,
+        };
+    },
+    methods: {
+        /**
+         * Exports data by calling the export endpoint.
+         *
+         * @vue-method
+         * @async
+         * @returns {Promise<void>} Resolves when the export call completes.
+         */
+        async exportToFile() {
+            try {
+                const response = await axios.get('http://127.0.0.1:5000/export');
+                // Process response as needed.
+            } catch (error) {
+                console.error('Could not export data.', error);
+            }
+        },
+    },
+    mounted() {
+        // nothing needed yet on mount
+    },
+};
 </script>
