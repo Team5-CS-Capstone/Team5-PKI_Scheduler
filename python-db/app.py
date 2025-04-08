@@ -154,7 +154,8 @@ def create_tables():
             room TEXT,
             meeting_pattern TEXT,
             enrollment INTEGER,
-            max_enrollment INTEGER
+            max_enrollment INTEGER,
+            PRIMARY KEY (term, course_number, section)
         )
     """)
 
@@ -172,8 +173,35 @@ def insert_csv_into_table(course_data):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
+    cross_lists = {}
+    for entry in course_data:
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+            if cross_list_key not in cross_lists:
+                cross_lists[cross_list_key] = []
+            cross_lists[cross_list_key].append(entry["Course"])
     # for entry in course_data:
     for entry in course_data:
+        course = entry["Course"]
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+        if cross_list_key in cross_list and course in cross_lists[cross_list_key]:
+            group_crosslists = []
+            for cross_list_entry in course_data:
+                if cross_list_entry["Course"] in cross_lists[cross_list_key]:
+                    group_crosslists.append(cross_list_entry)
+            total_enrollment = sum(int(e["Enrollment"]) for e in group_crosslists)
+            total_max = sum(int(e["Maximum Enrollment"]) for e in group_crosslists)
+            grouped_class = group_crosslists[0]
+
+            cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+
         cursor.execute("""
             INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -214,7 +242,7 @@ def parse_csv(csv_document):
     :rtype: list
     """
     course_data = []
-    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment", "Cross-listings"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -244,7 +272,8 @@ def parse_csv(csv_document):
                     "Room": row[col_indexes["Room"]],
                     "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
-                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]])
+                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
+                    "Cross-listings": row[col_indexes["Cross-listings"]].strip()
                 })
     
     # Returns a list of dicts (one dict per class entry)
