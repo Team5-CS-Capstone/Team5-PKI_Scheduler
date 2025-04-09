@@ -114,6 +114,7 @@ def upload_file():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
+    global file_path # make sure the file path is global so we can access it later
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
@@ -137,15 +138,13 @@ def create_tables():
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-
     # Drop the 'classes' table if it exists
     cursor.execute("DROP TABLE IF EXISTS classes")
 
     # Now, create the 'classes' table
     cursor.execute("""
         CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             term TEXT,
             course_number TEXT,
             section TEXT,
@@ -154,7 +153,7 @@ def create_tables():
             meeting_pattern TEXT,
             enrollment INTEGER,
             max_enrollment INTEGER,
-            PRIMARY KEY (term, course_number, section)
+            UNIQUE (term, course_number, section)
         )
     """)
 
@@ -212,7 +211,7 @@ def insert_csv_into_table(course_data):
             # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-             """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
         else:
             cursor.execute("""
                 INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
