@@ -37,7 +37,7 @@ def get_classes():
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, section, course_number, course_title FROM classes")
+    cursor.execute("SELECT id, section, course_number, course_title, enrollment, max_enrollment FROM classes")
     rows = cursor.fetchall()
     conn.close()
 
@@ -49,6 +49,8 @@ def get_classes():
             "section": row[1],
             "courseName": row[2],
             "courseTitle": row[3], 
+            "currentEnrollment": row[4],
+            "maxEnrollment": row[5],
         }
         classes.append(class_data)
 

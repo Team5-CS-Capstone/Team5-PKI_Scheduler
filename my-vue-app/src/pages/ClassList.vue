@@ -17,7 +17,7 @@
             v-for="course in filteredCourses"
             :key="course.id"
             :to="'/class/' + course.id"
-            class="bg-red-300 rounded-lg flex text-black items-center justify-center hover:bg-red-400 h-40 w-full p-6 border-black border-2"
+            :class=" course.currentEnrollment > course.maxEnrollment ? 'bg-red-300 rounded-lg flex text-black items-center justify-center hover:bg-red-400 h-40 w-full p-6 border-black border-2' : 'bg-blue-300 rounded-lg flex text-black items-center justify-center hover:bg-blue-400 h-40 w-full p-6 border-black border-2'"
             style="color: black;
             font-weight: bold;
             font-size: 1.3rem;"
@@ -44,7 +44,7 @@ const courses = ref([])
 // another reactive variable is needed
 // for the search text to update
 const search = ref("")
-// filterd courses holds the courses that match the search
+// filtered courses holds the courses that match the search
 // if there happens to be a search
 const filteredCourses = ref([])
 
