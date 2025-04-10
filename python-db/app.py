@@ -25,14 +25,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 @app.route("/classes", methods=["GET"])
 def get_classes():
     """
-    @brief This API endpoint function retrieves a list of classes from the database
+    Retrieve a list of classes from the database.
 
-    A connection to the SQLite database is made, and all records are fetched
-    from the classes table, id, section, course_number, and course_title are the attributes
-    that are selected and they're returned into a JSON array
+    A connection to the SQLite database is established, and all records are fetched 
+    from the ``classes`` table. The attributes fetched are ``id``, ``section``, 
+    ``course_number``, and ``course_title``. These are returned as a JSON array.
 
-    @return A JSON response that contains the list of class objects and a successful
-            HTTP status code is returned.
+    :return: JSON response containing the list of class objects along with an HTTP 200 status.
+    :rtype: flask.Response
     """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
@@ -60,15 +60,18 @@ def get_classes():
 @app.route("/class/<int:class_id>", methods=["GET"])
 def get_class(class_id):
     """
-    @brief This API endpoint function retrieves information on one class using a specific ID
+    Retrieve information about a single class using its numeric ID.
 
-    @param class_id parameter used to fetch details of a specific class from the db
+    Args:
+        class_id (int): 
+            The ID of the class to fetch from the database.
 
-    @return A JSON response that could contain two possible responses
-            200: If a class is found with the specific ID the individual
-                classes data is returned along with successful HTTP response (200).
-            404: If no class is found with the specific ID a message "Class not found"
-                and a 404 error is returned as well.
+    Returns:
+        flask.Response: 
+            A JSON response with two possible outcomes:
+            
+            * **200 OK** – If the class is found, returns a JSON object of class data.
+            * **404 Not Found** – If the class is not found, returns a JSON error message.
     """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
@@ -99,18 +102,27 @@ def get_class(class_id):
 # API Route to receive and handle CSV importing
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    """
+    Upload and process a CSV file.
 
+    .. note::
+        Expects a form field named ``file``.
+
+    :return: JSON response indicating success or failure.
+    :rtype: flask.Response
+    """
     # check if file was uploaded
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
-    global file_path # making this global so it can be used in the export function
+    global file_path # make sure the file path is global so we can access it later
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
     # Parse CSV file
     try:
+        file_path = fix_csv(file_path) # Function call to fix the sheet for trailing commas
         create_tables() # Create the tables in the database
         course_data = parse_csv(file_path)  # Parse the CSV file
         insert_csv_into_table(course_data) # Insert the parsed data into the database
@@ -120,10 +132,12 @@ def upload_file():
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
 def create_tables():
-    conn = sqlite3.connect(DB_FILE)  # Connect to database
-    cursor = conn.cursor()
+    """
+    Create the ``classes`` table in the database.
 
-    conn = sqlite3.connect(DB_FILE)
+    If it exists, it is dropped before re-creation.
+    """
+    conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
     # Drop the 'classes' table if it exists
@@ -140,7 +154,8 @@ def create_tables():
             room TEXT,
             meeting_pattern TEXT,
             enrollment INTEGER,
-            max_enrollment INTEGER
+            max_enrollment INTEGER,
+            UNIQUE (term, course_number, section)
         )
     """)
 
@@ -149,26 +164,98 @@ def create_tables():
 
 
 def insert_csv_into_table(course_data):
+    """
+    Insert parsed CSV data into the ``classes`` table.
+
+    :param course_data: List of dictionaries with course info.
+    :type course_data: list
+    """
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    # for entry in course_data:
+    # Start the crosslist checking and generating the dictionary dynamically based on if a class is crosslisted
+    cross_lists = {}
+    # Loop & check if a class is cross listed
     for entry in course_data:
-        cursor.execute("""
-            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            # reconstructing the key, take out spaces and split them with the "/", reconstruct to make sure everything works fine
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+            # If there is a crosslist in the column and the key is not in the dictionary
+            if cross_list_key not in cross_lists:
+                #add it
+                cross_lists[cross_list_key] = []
+            cross_lists[cross_list_key].append(entry["Course"])
+
+    # for entry in course_data:
+    # added some crosslist stuff here to check if it is in the dictionary generated from above
+    for entry in course_data:
+        # Info to get to see if crosslisted
+        course = entry["Course"]
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            # same key stuff as above, just re constructing so the keys are universal
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+        # This is where the check is to see if the class is 1- Cross listed in the column is a key in the dictionary, 2- if the course is a value in the key
+        if cross_list_key in cross_list and course in cross_lists[cross_list_key]:
+            # List to get which courses are crosslisted under one particular key, loop through course data once again and get all the courses and check each one to see if it is a course in one particular key
+            group_crosslists = []
+            for cross_list_entry in course_data:
+                if cross_list_entry["Course"] in cross_lists[cross_list_key]:
+                    group_crosslists.append(cross_list_entry)
+            #Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
+            total_enrollment = sum(int(course["Enrollment"]) for course in group_crosslists)
+            total_max = sum(int(course["Maximum Enrollment"]) for course in group_crosslists)
+            #To properly get the sqlite statement
+            grouped_class = group_crosslists[0]
+            # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
+            cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
-                int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+        else:
+            cursor.execute("""
+                INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
+                    int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
 
     conn.commit()
     conn.close()
 
     print("Data should now properly be inserted into the database from the csv file")
 
+'''Function to fix the trailing commas in the csv'''
+def fix_csv(csv_document):
+    '''Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files'''
+    fixed_csv = csv_document.replace(".csv", "-fix.csv")
+    '''Open the csv doc and the output file temporarily created'''
+    with open(csv_document, 'r', newline='') as csv_to_clean, open(fixed_csv, 'w', newline='') as output_csv:
+        reader = csv.reader(csv_to_clean)
+        writer = csv.writer(output_csv)
+        '''Loop to check if the last part of the row is empty and delete appropriately'''
+        for row in reader:
+            while row and row[-1] == '':
+                row.pop()
+            writer.writerow(row)
+        '''Return fixed sheet'''
+    return fixed_csv
+    
 
 def parse_csv(csv_document):
+    """
+    Parse the CSV file and return structured course data.
+
+    Skips the first two lines before reading headers.
+
+    :param csv_document: Path to the CSV file.
+    :type csv_document: str
+    :return: List of dictionaries representing each course entry.
+    :rtype: list
+    """
     course_data = []
-    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment", "Cross-listings"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -198,7 +285,8 @@ def parse_csv(csv_document):
                     "Room": row[col_indexes["Room"]],
                     "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
-                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]])
+                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
+                    "Cross-listings": row[col_indexes["Cross-listings"]].strip()
                 })
     
     # Returns a list of dicts (one dict per class entry)
@@ -209,26 +297,21 @@ def parse_csv(csv_document):
 @app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
 def update_enrollment(class_id):
     """
-    @brief This API endpoint function retrieves information on a specific class and updates its 
-            enrollment 
+    Update enrollment for a specific class by ID.
 
-            The action is stated in the API call in the front end and is taken in by the backend
-            and depending on the action (add or remove) the enrollment number of this specific 
-            class is incremented or decremented and if successful the new enrollment is returned
-            along with a 200 HTTP response
+    Increments or decrements the enrollment number according to the request 
+    (``add`` or ``remove``). If the maximum capacity is reached, adding is not allowed. 
+    If enrollment is zero, removing is not allowed.
 
-            If the enrollment is over its max it shouldn't be added to so an error occurs and is 
-            returned.
-            If the enrollment is 0 it shouldn't be removed from so an error occurs and is returned.
+    :param class_id: ID of the class to update.
+    :type class_id: int
 
-    @param class_id parameter used to fetch details of a specific class from the db and update
-            them accordingly
+    :return: JSON response containing the updated enrollment or an error message.
+    :rtype: flask.Response
 
-    @return A JSON response that could contain two possible responses
-            200: If a class is found with the specific ID the individual
-                classes data is returned along with successful HTTP response (200).
-            404: If no class is found with the specific ID a message "Class not found"
-                and a 404 error is returned as well.
+    :status 200: Class found and enrollment updated successfully.
+    :status 400: Invalid update (e.g., class is full or empty).
+    :status 404: Class not found.
     """
     data = request.get_json()
     action = data.get("action")
@@ -265,6 +348,20 @@ def update_enrollment(class_id):
 
 @app.route("/export")
 def export_to_csv():
+    """
+    Export classes from the database into a CSV file named ``output.csv``.
+
+    Reads data from the existing CSV (referenced by ``file_path``) and updates
+    enrollment values using the database. Ensures the first row is the term,
+    the second row is the generation date/time, and subsequent rows contain
+    updated class info.
+
+    :return: JSON response indicating success or an error message.
+    :rtype: flask.Response
+
+    :status 200: Successfully exported data to file.
+    :status 404: No database or error accessing records.
+    """
     conn = sqlite3.connect(DB_FILE)
     # check to make sure the connection worked
     # likely will remove this later. I'm thinking we disable the button if theres no database/problems if possible

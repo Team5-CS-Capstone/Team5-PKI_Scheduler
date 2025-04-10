@@ -17,10 +17,11 @@ git clone https://github.com/zkak345/Team5-PKI_Scheduler.git
 cd Team5-PKI_Scheduler
 ```
 
-2. Install dependencies:
+2. Install dependencies and frontend testing framework:
 ```sh
 cd my-vue-app
 npm install
+npm install --save-dev jest @vue/test-utils vue-jest@next babel-jest @babel/preset-env
 ```
 
 3. Create and Activate Virtual Environment and Install Requirements

@@ -1,0 +1,13 @@
+{
+    "plugins": [
+      "node_modules/jsdoc-vuejs"
+    ],
+    "source": {
+      "include": ["my-vue-app/src/pages"], 
+      "includePattern": "\\.(vue|js)$"
+    },
+    "opts": {
+        "destination": "./docs/jsdoc", 
+        "recurse": true
+      }
+  }

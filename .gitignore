@@ -3,3 +3,8 @@
 
 # Ignore all CSV files
 *.csv
+
+# Ignore venv
+flaskvenv
+
+node_modules
