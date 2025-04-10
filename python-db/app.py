@@ -114,6 +114,7 @@ def upload_file():
         return jsonify({"error": "No file uploaded"}), 400
     
     file = request.files['file']
+    global file_path # make sure the file path is global so we can access it later
     file_path = os.path.join(UPLOAD_FOLDER, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
@@ -137,9 +138,6 @@ def create_tables():
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-
     # Drop the 'classes' table if it exists
     cursor.execute("DROP TABLE IF EXISTS classes")
 
@@ -154,7 +152,8 @@ def create_tables():
             room TEXT,
             meeting_pattern TEXT,
             enrollment INTEGER,
-            max_enrollment INTEGER
+            max_enrollment INTEGER,
+            UNIQUE (term, course_number, section)
         )
     """)
 
@@ -172,13 +171,53 @@ def insert_csv_into_table(course_data):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
-    # for entry in course_data:
+    # Start the crosslist checking and generating the dictionary dynamically based on if a class is crosslisted
+    cross_lists = {}
+    # Loop & check if a class is cross listed
     for entry in course_data:
-        cursor.execute("""
-            INSERT INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            # reconstructing the key, take out spaces and split them with the "/", reconstruct to make sure everything works fine
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+            # If there is a crosslist in the column and the key is not in the dictionary
+            if cross_list_key not in cross_lists:
+                #add it
+                cross_lists[cross_list_key] = []
+            cross_lists[cross_list_key].append(entry["Course"])
+
+    # for entry in course_data:
+    # added some crosslist stuff here to check if it is in the dictionary generated from above
+    for entry in course_data:
+        # Info to get to see if crosslisted
+        course = entry["Course"]
+        cross_list = entry.get("Cross-listings", "").strip()
+        if cross_list:
+            # same key stuff as above, just re constructing so the keys are universal
+            courses = [course_num.strip() for course_num in cross_list.split('/')]
+            cross_list_key = " / ".join(sorted(courses))
+        # This is where the check is to see if the class is 1- Cross listed in the column is a key in the dictionary, 2- if the course is a value in the key
+        if cross_list_key in cross_list and course in cross_lists[cross_list_key]:
+            # List to get which courses are crosslisted under one particular key, loop through course data once again and get all the courses and check each one to see if it is a course in one particular key
+            group_crosslists = []
+            for cross_list_entry in course_data:
+                if cross_list_entry["Course"] in cross_lists[cross_list_key]:
+                    group_crosslists.append(cross_list_entry)
+            #Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
+            total_enrollment = sum(int(course["Enrollment"]) for course in group_crosslists)
+            total_max = sum(int(course["Maximum Enrollment"]) for course in group_crosslists)
+            #To properly get the sqlite statement
+            grouped_class = group_crosslists[0]
+            # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
+            cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
-                int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+        else:
+            cursor.execute("""
+                INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
+                    int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
 
     conn.commit()
     conn.close()
@@ -214,7 +253,7 @@ def parse_csv(csv_document):
     :rtype: list
     """
     course_data = []
-    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment", "Cross-listings"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -244,7 +283,8 @@ def parse_csv(csv_document):
                     "Room": row[col_indexes["Room"]],
                     "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
-                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]])
+                    "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
+                    "Cross-listings": row[col_indexes["Cross-listings"]].strip()
                 })
     
     # Returns a list of dicts (one dict per class entry)

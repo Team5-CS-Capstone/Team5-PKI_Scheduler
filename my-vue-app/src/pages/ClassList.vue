@@ -13,7 +13,7 @@
                 class="bg-red-300 rounded-lg flex text-black items-center justify-center hover:bg-red-400 h-40 w-full p-6 border-black border-2"
                 style="color: black;
             font-weight: bold;
-            font-size: 1.3rem;">
+            font-size: 1.0rem;">
                 {{ course.courseName }} - Section ({{ course.section }})
             </router-link>
         </div>
