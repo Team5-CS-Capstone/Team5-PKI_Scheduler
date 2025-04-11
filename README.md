@@ -122,3 +122,12 @@ Our branching strategy is very simple: each user has their branch which they pus
 -   Search feature for classes page implemented
 -   Some minor documentation created
 -   Overshot on github actions as tests haven't been created just yet
+
+
+### Milestone #3:
+- Reformatting of the Crosslist section
+- CSV file cleaning feature, and removal of trailing lines
+- Dynamic generation of a course cross list dictionary
+- Feature to combine all cross listed classes as one entry
+- Documentation Pages for front and backend
+- Tests set up and ready to start unit tests
