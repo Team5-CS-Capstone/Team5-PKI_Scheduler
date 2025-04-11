@@ -131,3 +131,4 @@ Our branching strategy is very simple: each user has their branch which they pus
 - Feature to combine all cross listed classes as one entry
 - Documentation Pages for front and backend
 - Tests set up and ready to start unit tests
+- Color feature implented to indicate if current enrollment is above maximum
