@@ -1,4 +1,31 @@
 <template>
+    <!-- Pop-up modal for classroom reassignment options -->
+    <div v-if="reassignmentModalVisible" class="fixed inset-0 flex items-center justify-center bg-black/40">
+        <div class="bg-white p-4 h- w-4/12 rounded shadow">
+            <div class="flex flex-col justify-between h-full items-center bg-white">
+                <div v-if="possibleReassignments.length" class="w-full p-4 space-y-4 bg-white border rounded">
+                    <h3 class="text-2xl font-bold mb-2 text-gray-800">Available Reassignments</h3>
+                    <ul class="space-y-2 border-2 border-gray-300 rounded-lg p-4 max-h-96 overflow-y-scroll">
+                        <li v-for="room in possibleReassignments" :key="room"
+                            class="flex justify-between items-center p-4 bg-white rounded hover:bg-gray-200 transition-colors">
+                            <span class="font-medium text-lg text-gray-700">
+                                {{ room }}
+                            </span>
+                            <button @click="selectReassignment(room)"
+                                class="bg-blue-600 text-white px-4 py-1 text-sm font-semibold rounded hover:bg-blue-500 focus:outline-none transition-colors">
+                                Select
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+
+                <button @click="ToggleReassignmentModal"
+                    class="mt-4 w-42 bg-red-500 text-white py-2 px-4 rounded cursor-pointer hover:bg-red-400">Close</button>
+            </div>
+        </div>
+    </div>
+
     <span class=" text-black text-2xl font-semibold mb-4 text-start"></span>
     <div class="flex flex-col space-y-4 text-black text-start h-full pl-6">
         <!-- Display class details when data is available -->
@@ -18,13 +45,22 @@
             <p class="text-red-600">Class not found.</p>
         </div>
 
-        <div v-if="classData" class="flex justify-between w-96 space-x-4">
-            <button @click="updateEnrollment('add')"
-                class="font-semibold bg-green-300 px-4 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add
-                Student</button>
-            <button @click="updateEnrollment('remove')"
-                class="font-semibold bg-red-300 px-4 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove
-                Student</button>
+        <div v-if="classData" class="flex flex-col justify-between w-96 space-y-4 w-50">
+            <div class="flex space-x-4">
+                <button @click="updateEnrollment('add')"
+                    class="font-semibold bg-green-300 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add
+                    Student</button>
+                <button @click="updateEnrollment('remove')"
+                    class="font-semibold bg-red-300 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove
+                    Student</button>
+            </div>
+
+            <div v-if="classData && classData.currentEnrollment > classData.maxEnrollment" class="flex w-full">
+                <span @click="ToggleReassignmentModal"
+                    class="hover:bg-yellow-500 flex items-center justify-center font-semibold w-full h-10  bg-yellow-200 rounded-xl text-center border-2 border-yellow-700 cursor-pointer">
+                    Check Reassignment Options
+                </span>
+            </div>
         </div>
     </div>
 
@@ -45,9 +81,25 @@ export default {
              * @vue-data {Object|null}
              */
             classData: null,
+            reassignmentModalVisible: false,
+            /**
+             * The list of possible reassignments for the class.
+             * @vue-data {string[]}
+             */
+            possibleReassignments: ['class 1', 'class 2', 'class 3', 'class 4', 'class 5', 'class 6', 'class 7'],
         };
     },
     methods: {
+        /**
+         * Toggles the visibility of the reassignment modal.
+         * This method is a placeholder and should be implemented as needed.
+         *
+         * @vue-method
+         */
+        ToggleReassignmentModal() {
+            // Placeholder for modal toggle logic
+            this.reassignmentModalVisible = !this.reassignmentModalVisible;
+        },
         /**
          * Fetches details for a specific class using the ID from the current route.
          * Updates the `classData` reactive property with the fetched data or null if there's an error.

@@ -8,13 +8,20 @@
                 @keyup.enter="searchCourses" />
         </div>
         <!-- Grid for clickable classes -->
-        <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid grid-cols-8 gap-4 mt-24 m-8">
-            <router-link v-for="course in filteredCourses" :key="course.id" :to="'/class/' + course.id"
-                class="bg-red-300 rounded-lg flex text-black items-center justify-center hover:bg-red-400 h-40 w-full p-6 border-black border-2"
-                style="color: black;
+        <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4 mt-24 m-8">
+            <router-link
+            v-for="course in filteredCourses"
+            :key="course.id"
+            :to="'/class/' + course.id"
+            :class=" course.currentEnrollment > course.maxEnrollment ? 
+            'bg-red-300 rounded-lg flex text-black items-center justify-center hover:bg-red-400 h-40 w-full p-6 border-black border-2' : 
+            'bg-blue-300 rounded-lg flex text-black items-center justify-center hover:bg-blue-400 h-40 w-full p-6 border-black border-2'"
+            style="color: black;
             font-weight: bold;
             font-size: 1.0rem;">
-                {{ course.courseName }} - Section ({{ course.section }})
+            <div class="flex flex-col">
+                {{ course.courseName }} <span v-if="!course.courseName.includes('/')">Section ({{ course.section }})</span>
+            </div>
             </router-link>
         </div>
 
