@@ -1,6 +1,7 @@
 import sqlite3
 import csv
 import os
+from utils import parse_instructor
 
 # Create the SQLite table for storing this parsed information
 def create_table():

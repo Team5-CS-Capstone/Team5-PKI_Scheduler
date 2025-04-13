@@ -139,7 +139,7 @@ def create_tables():
     cursor = conn.cursor()
 
     # Drop the 'classes' table if it exists
-    cursor.execute("DROP TABLE IF EXISTS classes")
+    cursor.execute("DROP TABLE IF EXISTS classes, professors")
 
     # Now, create the 'classes' table
     cursor.execute("""
@@ -153,9 +153,19 @@ def create_tables():
             meeting_pattern TEXT,
             enrollment INTEGER,
             max_enrollment INTEGER,
+            professor_id INTEGER,
+            FOREIGN KEY (professor_id) REFERENCES professors(id),
             UNIQUE (term, course_number, section)
         )
     """)
+
+    # Create the 'professors' table
+    cursor.execute("""
+        CREATE TABLE professors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            """
+        )
 
     conn.commit()  # Save changes
     conn.close()
