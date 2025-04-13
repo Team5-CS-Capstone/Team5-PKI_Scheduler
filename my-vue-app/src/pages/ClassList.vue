@@ -34,7 +34,6 @@
 
 <script>
 import axios from "axios";
-
 /**
  * This component displays a list of courses fetched from the server
  * and filters them based on user input. 
