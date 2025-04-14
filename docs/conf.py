@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../python-db'))
+sys.path.insert(0, os.path.abspath('../python_db'))
 
 project = 'PKI Scheduler - Team 5'
 copyright = '2025, Charlie, Zaid, Brian, John, Brady'
