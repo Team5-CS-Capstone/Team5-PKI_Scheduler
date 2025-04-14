@@ -6,6 +6,9 @@ import os
 import csv
 import datetime
 
+# Importing utility functions from utils.py
+from utils import parse_instructor, get_or_create_professor
+
 # Little overview of the imports above (uses):
 # flask → Web framework
 # flask-cors → Allows Vue to communicate with Flask
@@ -55,6 +58,21 @@ def get_classes():
         classes.append(class_data)
 
     return jsonify(classes), 200
+
+@app.route("/classes/<int:class_id>/professors", methods=["GET"])
+def get_professors(class_id):
+    """
+    Retrieve the professors associated with a specific class.
+
+    :param class_id: ID of the class to fetch professors for.
+    :type class_id: int
+
+    :return: JSON response containing the list of professors for the specified class.
+    :rtype: flask.Response
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
 
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
@@ -129,6 +147,10 @@ def upload_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     
+    # Delete the temp fixed csv file and the original csv file from uploads folder
+    os.remove(file_path)
+    os.remove(file_path.replace("-fix", ""))
+    
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
 def create_tables():
@@ -141,7 +163,9 @@ def create_tables():
     cursor = conn.cursor()
 
     # Drop the 'classes' table if it exists
-    cursor.execute("DROP TABLE IF EXISTS classes, professors")
+    cursor.execute("DROP TABLE IF EXISTS classes")
+    cursor.execute("DROP TABLE IF EXISTS professors")
+    cursor.execute("DROP TABLE IF EXISTS class_professors")
 
     # Now, create the 'classes' table
     cursor.execute("""
@@ -163,11 +187,23 @@ def create_tables():
 
     # Create the 'professors' table
     cursor.execute("""
-        CREATE TABLE professors (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            """
-        )
+            CREATE TABLE IF NOT EXISTS professors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT,
+                last_name TEXT,
+                p_id TEXT -- optional unique ID
+            )
+        """)
+    
+    # Create the 'class_professors' table for many-to-many relationship
+    # between classes and professors
+    cursor.execute("""CREATE TABLE IF NOT EXISTS class_professors (
+            class_id INTEGER,
+            professor_id INTEGER,
+            FOREIGN KEY (class_id) REFERENCES classes(id),
+            FOREIGN KEY (professor_id) REFERENCES professors(id)
+        )"""
+    )
 
     conn.commit()  # Save changes
     conn.close()
@@ -215,22 +251,41 @@ def insert_csv_into_table(course_data):
             for cross_list_entry in course_data:
                 if cross_list_entry["Course"] in cross_lists[cross_list_key]:
                     group_crosslists.append(cross_list_entry)
-            #Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
+            # Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
             total_enrollment = sum(int(course["Enrollment"]) for course in group_crosslists)
             total_max = sum(int(course["Maximum Enrollment"]) for course in group_crosslists)
-            #To properly get the sqlite statement
+            # To properly get the sqlite statement
             grouped_class = group_crosslists[0]
             # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
         else:
+            # Insert non crosslisted class into the database
             cursor.execute("""
                 INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
                     int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+            # Get the newest class ID
+            class_id = cursor.lastrowid
 
+            # Parse intstructor from csv and get needed info for adding to database
+            results = parse_instructor(entry['Instructor'])
+            
+            for professor_dict in results:
+                first_name = professor_dict['first_name']
+                last_name = professor_dict['last_name']
+                p_id = professor_dict['p_id']
+
+                # Insert or get the professor_id for a non crosslisted entry
+                professor_id = get_or_create_professor(cursor, first_name, last_name, p_id)
+
+                # Insert the class-professor relationship into the class_professors table
+                cursor.execute("""
+                    INSERT INTO class_professors (class_id, professor_id)
+                    VALUES (?, ?)""", (class_id, professor_id))
+                
     conn.commit()
     conn.close()
 
@@ -265,7 +320,9 @@ def parse_csv(csv_document):
     :rtype: list
     """
     course_data = []
-    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment", "Cross-listings"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", 
+                        "Meeting Pattern", "Enrollment", "Maximum Enrollment", 
+                        "Cross-listings", "Instructor"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -296,7 +353,8 @@ def parse_csv(csv_document):
                     "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
                     "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
-                    "Cross-listings": row[col_indexes["Cross-listings"]].strip()
+                    "Cross-listings": row[col_indexes["Cross-listings"]].strip(),
+                    "Instructor": row[col_indexes["Instructor"]].strip()
                 })
     
     # Returns a list of dicts (one dict per class entry)
