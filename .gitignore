@@ -3,6 +3,7 @@
 
 # Ignore all CSV files
 *.csv
+*.json
 
 # Ignore venv
 flaskvenv
