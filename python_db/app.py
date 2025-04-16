@@ -356,6 +356,7 @@ def parse_csv(csv_document):
                     "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
                     "Cross-listings": row[col_indexes["Cross-listings"]].strip(),
                     "Instructor": row[col_indexes["Instructor"]].strip(),
+                    #Second part of fix
                     "Cross-list Maximum": int(row[col_indexes["Cross-list Maximum"]]) if row[col_indexes["Cross-list Maximum"]].strip() else 0
 
                 })
