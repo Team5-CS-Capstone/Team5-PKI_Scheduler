@@ -259,7 +259,7 @@ def insert_csv_into_table(course_data):
             # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, grouped_class["Cross-list Maximum"]))
         else:
             # Insert non crosslisted class into the database
             cursor.execute("""
@@ -305,7 +305,7 @@ def parse_csv(csv_document):
     course_data = []
     relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", 
                         "Meeting Pattern", "Enrollment", "Maximum Enrollment", 
-                        "Cross-listings", "Instructor"]
+                        "Cross-listings", "Instructor", "Cross-list Maximum"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -337,7 +337,8 @@ def parse_csv(csv_document):
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
                     "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
                     "Cross-listings": row[col_indexes["Cross-listings"]].strip(),
-                    "Instructor": row[col_indexes["Instructor"]].strip()
+                    "Instructor": row[col_indexes["Instructor"]].strip(),
+                    "Cross-list Maximum": int(row[col_indexes["Cross-list Maximum"]]) if row[col_indexes["Cross-list Maximum"]].strip() else 0
                 })
     
     # Returns a list of dicts (one dict per class entry)
