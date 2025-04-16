@@ -17,10 +17,11 @@ git clone https://github.com/zkak345/Team5-PKI_Scheduler.git
 cd Team5-PKI_Scheduler
 ```
 
-2. Install dependencies:
+2. Install dependencies and frontend testing framework:
 ```sh
 cd my-vue-app
 npm install
+npm install --save-dev jest @vue/test-utils vue-jest@next babel-jest @babel/preset-env
 ```
 
 3. Create and Activate Virtual Environment and Install Requirements
@@ -79,6 +80,8 @@ Example of an endpoint that takes in a parameter for class ID below:
 | `/class/<id>`     | `GET`      | Fetch a single class by ID            |
 | `/class/<id>/update-enrollment` | `PUT` | Fetch a single class by ID and update its enrollment accordingly|
 | `/upload`     | `PUT`      | Receives and handles CSV importing to the database |
+| `/export`     | `PUT`      | Exports classes from the database into a CSV |
+| `/class/<id>/professors`     | `GET`      | (WIP) Retrieves the profs associated with a specific class |
 
 
 ## SQLite Database Installation/Recommendations 
@@ -121,3 +124,13 @@ Our branching strategy is very simple: each user has their branch which they pus
 -   Search feature for classes page implemented
 -   Some minor documentation created
 -   Overshot on github actions as tests haven't been created just yet
+
+
+### Milestone #3:
+- Reformatting of the Crosslist section
+- CSV file cleaning feature, and removal of trailing lines
+- Dynamic generation of a course cross list dictionary
+- Feature to combine all cross listed classes as one entry
+- Documentation Pages for front and backend
+- Tests set up and ready to start unit tests
+- Color feature implented to indicate if current enrollment is above maximum
