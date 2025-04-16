@@ -1,7 +1,7 @@
 # This file is used for utility functions that are used in the app.py file.
 # It contains mostly functions to parse / regularize data from the csv file and insert it into the database.
 
-import re
+import re, csv
 
 def parse_instructor(instructor_from_csv):
     """
@@ -53,3 +53,20 @@ def get_or_create_professor(cursor, first_name, last_name, p_id):
         cursor.execute("INSERT INTO professors(first_name, last_name, p_id) VALUES(?, ?, ?)",
                     (first_name, last_name, p_id))
         return cursor.lastrowid
+    
+'''Function to fix the trailing commas in the csv'''
+def fix_csv(csv_document):
+    '''Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files'''
+    fixed_csv = csv_document.replace(".csv", "-fix.csv")
+    '''Open the csv doc and the output file temporarily created'''
+    with open(csv_document, 'r', newline='') as csv_to_clean, open(fixed_csv, 'w', newline='') as output_csv:
+        reader = csv.reader(csv_to_clean)
+        writer = csv.writer(output_csv)
+        '''Loop to check if the last part of the row is empty and delete appropriately'''
+        for row in reader:
+            while row and row[-1] == '':
+                row.pop()
+            writer.writerow(row)
+        '''Return fixed sheet'''
+    return fixed_csv
+    
