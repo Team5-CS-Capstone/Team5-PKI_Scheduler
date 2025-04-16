@@ -3,7 +3,7 @@
       "node_modules/jsdoc-vuejs"
     ],
     "source": {
-      "include": ["my-vue-app/src/pages"], 
+      "include": ["frontend/src/pages"], 
       "includePattern": "\\.(vue|js)$"
     },
     "opts": {
