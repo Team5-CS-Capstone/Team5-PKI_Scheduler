@@ -59,7 +59,7 @@ def get_classes():
 
     return jsonify(classes), 200
 
-@app.route("/classes/<int:class_id>/professors", methods=["GET"])
+@app.route("/class/<int:class_id>/professors", methods=["GET"])
 def get_professors(class_id):
     """
     Retrieve the professors associated with a specific class.
@@ -73,6 +73,26 @@ def get_professors(class_id):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
+    cursor.execute("""
+        SELECT professors.id, professors.first_name, professors.last_name, professors.p_id
+        FROM professors
+        JOIN class_professors ON professors.id = class_professors.professor_id
+        WHERE class_professors.class_id = ?
+    """, (class_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    professors = []
+    for row in rows:
+        professors.append({
+            "id": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "p_id": row[3]
+        })
+
+    return jsonify(professors), 200
 
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
@@ -180,7 +200,6 @@ def create_tables():
             enrollment INTEGER,
             max_enrollment INTEGER,
             professor_id INTEGER,
-            FOREIGN KEY (professor_id) REFERENCES professors(id),
             UNIQUE (term, course_number, section)
         )
     """)
@@ -191,7 +210,7 @@ def create_tables():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 first_name TEXT,
                 last_name TEXT,
-                p_id TEXT -- optional unique ID
+                p_id TEXT
             )
         """)
     
@@ -202,6 +221,7 @@ def create_tables():
             professor_id INTEGER,
             FOREIGN KEY (class_id) REFERENCES classes(id),
             FOREIGN KEY (professor_id) REFERENCES professors(id)
+            UNIQUE (class_id, professor_id)
         )"""
     )
 
@@ -260,6 +280,21 @@ def insert_csv_into_table(course_data):
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, grouped_class["Cross-list Maximum"]))
+
+            # Get the newest class ID
+            class_id = cursor.lastrowid
+
+            # Parse intstructor from csv and get needed info for adding to database
+            results = parse_instructor(grouped_class['Instructor'])
+
+            for professor_dict in results:
+                first_name = professor_dict['first_name']
+                last_name = professor_dict['last_name']
+                professor_id = professor_dict['p_id']
+
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
         else:
             # Insert non crosslisted class into the database
             cursor.execute("""
@@ -276,15 +311,11 @@ def insert_csv_into_table(course_data):
             for professor_dict in results:
                 first_name = professor_dict['first_name']
                 last_name = professor_dict['last_name']
-                p_id = professor_dict['p_id']
+                professor_id = professor_dict['p_id']
 
-                # Insert or get the professor_id for a non crosslisted entry
-                professor_id = get_or_create_professor(cursor, first_name, last_name, p_id)
-
-                # Insert the class-professor relationship into the class_professors table
-                cursor.execute("""
-                    INSERT INTO class_professors (class_id, professor_id)
-                    VALUES (?, ?)""", (class_id, professor_id))
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
                 
     conn.commit()
     conn.close()
