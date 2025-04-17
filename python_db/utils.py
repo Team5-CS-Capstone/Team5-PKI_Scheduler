@@ -37,7 +37,7 @@ def parse_instructor(instructor_from_csv):
 
     return results
 
-def get_or_create_professor(cursor, first_name, last_name, p_id):
+def get_or_create_professor(cursor, first_name, last_name, p_id, class_id):
     """
     Get or create a professor in the database.
     This function will check if the professor already exists in the database
@@ -48,11 +48,20 @@ def get_or_create_professor(cursor, first_name, last_name, p_id):
 
     if professor:
         # Professor already exists, return the existing entry
-        return professor[0]
+        # use this id to insert into the class_professors table
+        professor_id = professor[0]
     else:
-        cursor.execute("INSERT INTO professors(first_name, last_name, p_id) VALUES(?, ?, ?)",
+        # Professor does not exist, insert a new entry
+        # and get this id to insert into the class_professors table
+        cursor.execute("INSERT OR IGNORE INTO professors(first_name, last_name, p_id) VALUES(?, ?, ?)",
                     (first_name, last_name, p_id))
-        return cursor.lastrowid
+        professor_id = cursor.lastrowid    
+
+    # Insert the class-professor relationship into the class_professors table
+    # if the professor already exists
+    cursor.execute("""INSERT OR IGNORE INTO class_professors (class_id, professor_id)
+                            VALUES (?, ?)""", (class_id, professor_id)) 
+
     
 '''Function to fix the trailing commas in the csv'''
 def fix_csv(csv_document):

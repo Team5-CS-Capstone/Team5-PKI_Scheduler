@@ -38,6 +38,11 @@
             <p class="text-2xl"><strong>Time:</strong> {{ classData.time }}</p>
             <p class="text-2xl"><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{
                 classData.maxEnrollment }}</p>
+            <p v-if="professors" class="text-2xl"><strong>Professors: </strong>
+                <span v-for="professor in professors" :key="professor.id" class="text-2xl"> 
+                    {{ professor.first_name }} {{ professor.last_name }} 
+                </span>
+            </p>
         </div>
 
         <!-- Error state -->
@@ -87,6 +92,11 @@ export default {
              * @vue-data {string[]}
              */
             possibleReassignments: ['class 1', 'class 2', 'class 3', 'class 4', 'class 5', 'class 6', 'class 7'],
+            /**
+             * The list of professors associated with the class.
+             * @vue-data {Object[]}
+             */
+            professors: null,
         };
     },
     methods: {
@@ -135,6 +145,22 @@ export default {
                 console.error(error);
             }
         },
+        /**
+         * Fetches the list of professors associated with the class.
+         * Updates the `professors` reactive property with the fetched data.
+         *
+         * @vue-method
+         * @async
+         * @returns {Promise<void>} Resolves after setting the professors data.
+         */
+        async getProfessors() {
+            try {
+                const response = await axios.get(`http://127.0.0.1:5000/class/${this.$route.params.id}/professors`);
+                this.professors = response.data;
+            } catch (error) {
+                console.error("Failed to load professors:", error);                
+            }
+        }
     },
     /**
      * Lifecycle hook: called after the component is mounted.
@@ -142,6 +168,7 @@ export default {
      */
     mounted() {
         this.fetchClassDetails();
+        this.getProfessors();
     },
 };
 </script>
