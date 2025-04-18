@@ -25,6 +25,41 @@ DB_FILE = "database.db"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
+@app.route("/class/<int:class_id>/possible-reassignments", methods=["GET"])
+def get_possible_reassignments(class_id):
+    """
+    Retrieve possible reassignments for a specific class.
+
+    :param class_id: ID of the class to fetch possible reassignments for.
+    :type class_id: int
+
+    :return: JSON response containing the list of possible reassignments.
+    :rtype: flask.Response
+    """
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row # Enable row factory to access columns by name
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        WITH target_class AS (
+                    SELECT id, meeting_pattern, enrollment,
+                    max_enrollment, room, course_number, course_title
+                    FROM classes
+                    WHERE id = ?
+                )
+                    SELECT b.*
+                    FROM classes b, target_class t
+                    WHERE b.id != t.id
+                    AND b.meeting_pattern = t.meeting_pattern -- same meeting times
+                    AND t.max_enrollment >= b.enrollment -- target class can accommodate the other class
+                    AND b.max_enrollment >= t.enrollment -- other class can accommodate the target class
+                    AND  NOT (b.enrollment = 0 AND b.max_enrollment = 0) -- ignore classes with no enrollment (they're remote classes)
+                ORDER BY (b.max_enrollment - b.enrollment) ASC -- sort by available seats
+    """, (class_id,))
+    partners = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(partners), 200
+
 @app.route("/classes", methods=["GET"])
 def get_classes():
     """
