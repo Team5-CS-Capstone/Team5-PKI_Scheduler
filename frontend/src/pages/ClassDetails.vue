@@ -1,22 +1,38 @@
 <template>
     <!-- Pop-up modal for classroom reassignment options -->
-    <div v-if="reassignmentModalVisible" class="fixed inset-0 flex items-center justify-center bg-black/40">
-        <div class="bg-white p-4 h- w-4/12 rounded shadow">
+    <div v-if="reassignmentModalVisible && !loadingReassignments"
+        class="fixed inset-0 flex items-center justify-center bg-black/40">
+        <div class="bg-white p-4 h- w-8/12 rounded shadow">
             <div class="flex flex-col justify-between h-full items-center bg-white">
-                <div v-if="possibleReassignments.length" class="w-full p-4 space-y-4 bg-white border rounded">
-                    <h3 class="text-2xl font-bold mb-2 text-gray-800">Available Reassignments</h3>
-                    <ul class="space-y-2 border-2 border-gray-300 rounded-lg p-4 max-h-96 overflow-y-scroll">
-                        <li v-for="room in possibleReassignments" :key="room"
-                            class="flex justify-between items-center p-4 bg-white rounded hover:bg-gray-200 transition-colors">
-                            <span class="font-medium text-lg text-gray-700">
-                                {{ room }}
-                            </span>
-                            <button @click="selectReassignment(room)"
-                                class="bg-blue-600 text-white px-4 py-1 text-sm font-semibold rounded hover:bg-blue-500 focus:outline-none transition-colors">
-                                Select
-                            </button>
-                        </li>
-                    </ul>
+                <div class="w-full p-4 space-y-4 bg-white border rounded">
+                    <p v-if="noReassingmnments" class="text-2xl text-red-600">No available class swaps.</p>
+                    <div v-else>
+                        <p class="text-2xl text-gray-600 font-semibold pb-4">Select a room to reassign the class:</p>
+                        <!-- Column Headers -->
+                        <div class="grid grid-cols-[3fr_3fr_3fr_1fr] p-4 bg-gray-400 rounded-t-4xl w-full">
+                            <span class="px-2 font-bold text-sm text-gray-700">Course Number</span>
+                            <span class="font-bold text-sm text-gray-700">Room and Meeting Pattern</span>
+                            <span class="font-bold text-sm text-gray-700">Enrollment / Max Enrollment</span>
+                            <span class="font-bold text-sm text-gray-700"></span>
+                        </div>
+                        <ul
+                            class="grid grid-cols-[3fr_3fr_3fr_1fr] gap-y-2 border-2 border-gray-300 rounded-lg max-h-96 overflow-y-scroll">
+                            <li v-for="(options, index) in possibleReassignments" :key="options.room" class="contents">
+                                <span class="p-4 font-medium text-sm text-gray-700">Option {{ index + 1 }} - {{
+                                    options.course_number }}</span>
+                                <span class="p-4 font-medium text-sm text-gray-700">{{ options.room }} {{
+                                    options.meeting_pattern }}</span>
+                                <span class="p-4 font-medium text-sm text-gray-700 truncate">Enrollment: {{
+                                    options.enrollment }} / {{ options.max_enrollment }}</span>
+                                <span class="p-4 flex justify-end">
+                                    <button @click="selectReassignment(options.room)"
+                                        class="bg-blue-600 text-white px-2 py-1 text-sm font-semibold rounded hover:bg-blue-500">Select</button>
+                                </span>
+                            </li>
+                        </ul>
+
+                    </div>
+
                 </div>
 
 
@@ -39,8 +55,9 @@
             <p class="text-2xl"><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{
                 classData.maxEnrollment }}</p>
             <p v-if="professors" class="text-2xl"><strong>Professors: </strong>
-                <span v-for="professor in professors" :key="professor.id" class="text-2xl"> 
-                    {{ professor.first_name }} {{ professor.last_name }} 
+                <span v-for="(professor, index) in professors" :key="professor.id" class="text-2xl">
+                    {{ professor.first_name }} {{ professor.last_name }}<span v-if="index < professors.length - 1">,
+                    </span>
                 </span>
             </p>
         </div>
@@ -56,12 +73,13 @@
                     class="font-semibold bg-green-300 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add
                     Student</button>
                 <button @click="updateEnrollment('remove')"
-                    class="font-semibold bg-red-300 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">Remove
-                    Student</button>
+                    class="font-semibold bg-red-300 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">
+                    Remove Student
+                </button>
             </div>
 
-            <div v-if="classData && classData.currentEnrollment > classData.maxEnrollment" class="flex w-full">
-                <span @click="ToggleReassignmentModal"
+            <div v-if="classData" class="flex w-full">
+                <span @click="fetchPossibleReassignments(classData.id)"
                     class="hover:bg-yellow-500 flex items-center justify-center font-semibold w-full h-10  bg-yellow-200 rounded-xl text-center border-2 border-yellow-700 cursor-pointer">
                     Check Reassignment Options
                 </span>
@@ -86,12 +104,18 @@ export default {
              * @vue-data {Object|null}
              */
             classData: null,
+            /**
+             * The visibility state of the reassignment modal.
+             * @vue-data {boolean}
+             */
             reassignmentModalVisible: false,
             /**
              * The list of possible reassignments for the class.
              * @vue-data {string[]}
              */
-            possibleReassignments: ['class 1', 'class 2', 'class 3', 'class 4', 'class 5', 'class 6', 'class 7'],
+            possibleReassignments: null,
+            noReassingmnments: false,
+            loadingReassignments: false,
             /**
              * The list of professors associated with the class.
              * @vue-data {Object[]}
@@ -109,6 +133,23 @@ export default {
         ToggleReassignmentModal() {
             // Placeholder for modal toggle logic
             this.reassignmentModalVisible = !this.reassignmentModalVisible;
+        },
+        async fetchPossibleReassignments(class_id) {
+            try {
+                this.loadingReassignments = true;
+                const response = await axios.get(`http://127.0.0.1:5000/class/${class_id}/possible-reassignments`);
+                this.possibleReassignments = response.data;
+                this.ToggleReassignmentModal();
+                if (this.possibleReassignments.length === 0) {
+                    this.noReassingmnments = true;
+                } else {
+                    this.noReassingmnments = false;
+                }
+            } catch (error) {
+                console.error("Failed to load reassignments:", error);
+            } finally {
+                this.loadingReassignments = false;
+            }
         },
         /**
          * Fetches details for a specific class using the ID from the current route.
@@ -158,7 +199,7 @@ export default {
                 const response = await axios.get(`http://127.0.0.1:5000/class/${this.$route.params.id}/professors`);
                 this.professors = response.data;
             } catch (error) {
-                console.error("Failed to load professors:", error);                
+                console.error("Failed to load professors:", error);
             }
         }
     },
