@@ -81,7 +81,8 @@ Example of an endpoint that takes in a parameter for class ID below:
 | `/class/<id>/update-enrollment` | `PUT` | Fetch a single class by ID and update its enrollment accordingly|
 | `/upload`     | `PUT`      | Receives and handles CSV importing to the database |
 | `/export`     | `PUT`      | Exports classes from the database into a CSV |
-| `/class/<id>/professors`     | `GET`      | (WIP) Retrieves the profs associated with a specific class |
+| `/class/<id>/professors`     | `GET`      | Retrieves the profs associated with a specific class |
+| `/class/<id>/possible-reassignments`     | `GET`      | Retrieves the possible class swaps for a specific class |
 
 
 ## SQLite Database Installation/Recommendations 

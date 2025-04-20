@@ -25,6 +25,41 @@ DB_FILE = "database.db"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
+@app.route("/class/<int:class_id>/possible-reassignments", methods=["GET"])
+def get_possible_reassignments(class_id):
+    """
+    Retrieve possible reassignments for a specific class.
+
+    :param class_id: ID of the class to fetch possible reassignments for.
+    :type class_id: int
+
+    :return: JSON response containing the list of possible reassignments.
+    :rtype: flask.Response
+    """
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row # Enable row factory to access columns by name
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        WITH target_class AS (
+                    SELECT id, meeting_pattern, enrollment,
+                    max_enrollment, room, course_number, course_title
+                    FROM classes
+                    WHERE id = ?
+                )
+                    SELECT b.*
+                    FROM classes b, target_class t
+                    WHERE b.id != t.id
+                    AND b.meeting_pattern = t.meeting_pattern -- same meeting times
+                    AND t.max_enrollment >= b.enrollment -- target class can accommodate the other class
+                    AND b.max_enrollment >= t.enrollment -- other class can accommodate the target class
+                    AND  NOT (b.enrollment = 0 AND b.max_enrollment = 0) -- ignore classes with no enrollment (they're remote classes)
+                ORDER BY (b.max_enrollment - b.enrollment) ASC -- sort by available seats
+    """, (class_id,))
+    partners = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(partners), 200
+
 @app.route("/classes", methods=["GET"])
 def get_classes():
     """
@@ -59,7 +94,7 @@ def get_classes():
 
     return jsonify(classes), 200
 
-@app.route("/classes/<int:class_id>/professors", methods=["GET"])
+@app.route("/class/<int:class_id>/professors", methods=["GET"])
 def get_professors(class_id):
     """
     Retrieve the professors associated with a specific class.
@@ -73,6 +108,26 @@ def get_professors(class_id):
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 
+    cursor.execute("""
+        SELECT professors.id, professors.first_name, professors.last_name, professors.p_id
+        FROM professors
+        JOIN class_professors ON professors.id = class_professors.professor_id
+        WHERE class_professors.class_id = ?
+    """, (class_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    professors = []
+    for row in rows:
+        professors.append({
+            "id": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "p_id": row[3]
+        })
+
+    return jsonify(professors), 200
 
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
@@ -180,7 +235,6 @@ def create_tables():
             enrollment INTEGER,
             max_enrollment INTEGER,
             professor_id INTEGER,
-            FOREIGN KEY (professor_id) REFERENCES professors(id),
             UNIQUE (term, course_number, section)
         )
     """)
@@ -191,7 +245,7 @@ def create_tables():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 first_name TEXT,
                 last_name TEXT,
-                p_id TEXT -- optional unique ID
+                p_id TEXT
             )
         """)
     
@@ -202,6 +256,7 @@ def create_tables():
             professor_id INTEGER,
             FOREIGN KEY (class_id) REFERENCES classes(id),
             FOREIGN KEY (professor_id) REFERENCES professors(id)
+            UNIQUE (class_id, professor_id)
         )"""
     )
 
@@ -260,6 +315,21 @@ def insert_csv_into_table(course_data):
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, grouped_class["Cross-list Maximum"]))
+
+            # Get the newest class ID
+            class_id = cursor.lastrowid
+
+            # Parse intstructor from csv and get needed info for adding to database
+            results = parse_instructor(grouped_class['Instructor'])
+
+            for professor_dict in results:
+                first_name = professor_dict['first_name']
+                last_name = professor_dict['last_name']
+                professor_id = professor_dict['p_id']
+
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
         else:
             # Insert non crosslisted class into the database
             cursor.execute("""
@@ -276,15 +346,11 @@ def insert_csv_into_table(course_data):
             for professor_dict in results:
                 first_name = professor_dict['first_name']
                 last_name = professor_dict['last_name']
-                p_id = professor_dict['p_id']
+                professor_id = professor_dict['p_id']
 
-                # Insert or get the professor_id for a non crosslisted entry
-                professor_id = get_or_create_professor(cursor, first_name, last_name, p_id)
-
-                # Insert the class-professor relationship into the class_professors table
-                cursor.execute("""
-                    INSERT INTO class_professors (class_id, professor_id)
-                    VALUES (?, ?)""", (class_id, professor_id))
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
                 
     conn.commit()
     conn.close()
@@ -339,6 +405,7 @@ def parse_csv(csv_document):
                     "Cross-listings": row[col_indexes["Cross-listings"]].strip(),
                     "Instructor": row[col_indexes["Instructor"]].strip(),
                     "Cross-list Maximum": int(row[col_indexes["Cross-list Maximum"]]) if row[col_indexes["Cross-list Maximum"]].strip() else 0
+
                 })
     
     # Returns a list of dicts (one dict per class entry)

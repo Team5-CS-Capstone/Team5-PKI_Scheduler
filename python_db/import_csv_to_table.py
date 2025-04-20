@@ -136,7 +136,6 @@ if __name__ == "__main__":
     # Define the relevant columns we need
     relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment"]
 
-   
     # Check if file exists
     if not os.path.exists(input_file):
         raise FileNotFoundError(f'File not found: {input_file}')
