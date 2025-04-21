@@ -19,7 +19,7 @@ cd Team5-PKI_Scheduler
 
 2. Install dependencies and frontend testing framework:
 ```sh
-cd my-vue-app
+cd frontend
 npm install
 npm install --save-dev jest @vue/test-utils vue-jest@next babel-jest @babel/preset-env
 ```
@@ -45,7 +45,7 @@ python app.py
 6. Run application
 ```sh
 cd ..
-cd my-vue-app
+cd frontend
 npm run dev
 ```
 
