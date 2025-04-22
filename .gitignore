@@ -3,8 +3,10 @@
 
 # Ignore all CSV files
 *.csv
+*.json
 
 # Ignore venv
 flaskvenv
 
 node_modules
+python-db/__pycache__/import_csv_to_table.cpython-313.pyc

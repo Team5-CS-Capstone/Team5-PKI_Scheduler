@@ -6,6 +6,9 @@ import os
 import csv
 import datetime
 
+# Importing utility functions from utils.py
+from utils import parse_instructor, get_or_create_professor, fix_csv
+
 # Little overview of the imports above (uses):
 # flask → Web framework
 # flask-cors → Allows Vue to communicate with Flask
@@ -22,6 +25,41 @@ DB_FILE = "database.db"
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
 
+@app.route("/class/<int:class_id>/possible-reassignments", methods=["GET"])
+def get_possible_reassignments(class_id):
+    """
+    Retrieve possible reassignments for a specific class.
+
+    :param class_id: ID of the class to fetch possible reassignments for.
+    :type class_id: int
+
+    :return: JSON response containing the list of possible reassignments.
+    :rtype: flask.Response
+    """
+    conn = sqlite3.connect(DB_FILE)
+    conn.row_factory = sqlite3.Row # Enable row factory to access columns by name
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        WITH target_class AS (
+                    SELECT id, meeting_pattern, enrollment,
+                    max_enrollment, room, course_number, course_title
+                    FROM classes
+                    WHERE id = ?
+                )
+                    SELECT b.*
+                    FROM classes b, target_class t
+                    WHERE b.id != t.id
+                    AND b.meeting_pattern = t.meeting_pattern -- same meeting times
+                    AND t.max_enrollment >= b.enrollment -- target class can accommodate the other class
+                    AND b.max_enrollment >= t.enrollment -- other class can accommodate the target class
+                    AND  NOT (b.enrollment = 0 AND b.max_enrollment = 0) -- ignore classes with no enrollment (they're remote classes)
+                ORDER BY (b.max_enrollment - b.enrollment) ASC -- sort by available seats
+    """, (class_id,))
+    partners = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(partners), 200
+
 @app.route("/classes", methods=["GET"])
 def get_classes():
     """
@@ -37,7 +75,7 @@ def get_classes():
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, section, course_number, course_title FROM classes")
+    cursor.execute("SELECT id, section, course_number, course_title, enrollment, max_enrollment FROM classes")
     rows = cursor.fetchall()
     conn.close()
 
@@ -49,10 +87,47 @@ def get_classes():
             "section": row[1],
             "courseName": row[2],
             "courseTitle": row[3], 
+            "currentEnrollment": row[4],
+            "maxEnrollment": row[5],
         }
         classes.append(class_data)
 
     return jsonify(classes), 200
+
+@app.route("/class/<int:class_id>/professors", methods=["GET"])
+def get_professors(class_id):
+    """
+    Retrieve the professors associated with a specific class.
+
+    :param class_id: ID of the class to fetch professors for.
+    :type class_id: int
+
+    :return: JSON response containing the list of professors for the specified class.
+    :rtype: flask.Response
+    """
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT professors.id, professors.first_name, professors.last_name, professors.p_id
+        FROM professors
+        JOIN class_professors ON professors.id = class_professors.professor_id
+        WHERE class_professors.class_id = ?
+    """, (class_id,))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    professors = []
+    for row in rows:
+        professors.append({
+            "id": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "p_id": row[3]
+        })
+
+    return jsonify(professors), 200
 
 # API Route to fetch class details by ID 
 @app.route("/class/<int:class_id>", methods=["GET"])
@@ -127,6 +202,10 @@ def upload_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     
+    # Delete the temp fixed csv file and the original csv file from uploads folder
+    os.remove(file_path)
+    os.remove(file_path.replace("-fix", ""))
+    
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
 def create_tables():
@@ -140,6 +219,8 @@ def create_tables():
 
     # Drop the 'classes' table if it exists
     cursor.execute("DROP TABLE IF EXISTS classes")
+    cursor.execute("DROP TABLE IF EXISTS professors")
+    cursor.execute("DROP TABLE IF EXISTS class_professors")
 
     # Now, create the 'classes' table
     cursor.execute("""
@@ -153,9 +234,31 @@ def create_tables():
             meeting_pattern TEXT,
             enrollment INTEGER,
             max_enrollment INTEGER,
+            professor_id INTEGER,
             UNIQUE (term, course_number, section)
         )
     """)
+
+    # Create the 'professors' table
+    cursor.execute("""
+            CREATE TABLE IF NOT EXISTS professors (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT,
+                last_name TEXT,
+                p_id TEXT
+            )
+        """)
+    
+    # Create the 'class_professors' table for many-to-many relationship
+    # between classes and professors
+    cursor.execute("""CREATE TABLE IF NOT EXISTS class_professors (
+            class_id INTEGER,
+            professor_id INTEGER,
+            FOREIGN KEY (class_id) REFERENCES classes(id),
+            FOREIGN KEY (professor_id) REFERENCES professors(id)
+            UNIQUE (class_id, professor_id)
+        )"""
+    )
 
     conn.commit()  # Save changes
     conn.close()
@@ -203,43 +306,56 @@ def insert_csv_into_table(course_data):
             for cross_list_entry in course_data:
                 if cross_list_entry["Course"] in cross_lists[cross_list_key]:
                     group_crosslists.append(cross_list_entry)
-            #Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
+            # Take account all of enrollment and sum them up together, but this time looping through that list of all the course under one particular key
             total_enrollment = sum(int(course["Enrollment"]) for course in group_crosslists)
             total_max = sum(int(course["Maximum Enrollment"]) for course in group_crosslists)
-            #To properly get the sqlite statement
+            # To properly get the sqlite statement
             grouped_class = group_crosslists[0]
             # There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates
             cursor.execute("""INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, total_max))
+            """, (grouped_class['Term'], cross_list_key, grouped_class['Section #'], grouped_class['Course Title'], grouped_class['Room'], grouped_class['Meeting Pattern'], total_enrollment, grouped_class["Cross-list Maximum"]))
+
+            # Get the newest class ID
+            class_id = cursor.lastrowid
+
+            # Parse intstructor from csv and get needed info for adding to database
+            results = parse_instructor(grouped_class['Instructor'])
+
+            for professor_dict in results:
+                first_name = professor_dict['first_name']
+                last_name = professor_dict['last_name']
+                professor_id = professor_dict['p_id']
+
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
         else:
+            # Insert non crosslisted class into the database
             cursor.execute("""
                 INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (entry['Term'], entry['Course'], entry['Section #'], entry['Course Title'], entry['Room'], entry['Meeting Pattern'], 
                     int(entry['Enrollment']), int(entry['Maximum Enrollment'])))
+            # Get the newest class ID
+            class_id = cursor.lastrowid
 
+            # Parse intstructor from csv and get needed info for adding to database
+            results = parse_instructor(entry['Instructor'])
+            
+            for professor_dict in results:
+                first_name = professor_dict['first_name']
+                last_name = professor_dict['last_name']
+                professor_id = professor_dict['p_id']
+
+                # Insert the class-professor relationship into the class_professors table and 
+                # add the professor to the database if they don't exist
+                get_or_create_professor(cursor, first_name, last_name, professor_id, class_id)
+                
     conn.commit()
     conn.close()
 
     print("Data should now properly be inserted into the database from the csv file")
-
-'''Function to fix the trailing commas in the csv'''
-def fix_csv(csv_document):
-    '''Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files'''
-    fixed_csv = csv_document.replace(".csv", "-fix.csv")
-    '''Open the csv doc and the output file temporarily created'''
-    with open(csv_document, 'r', newline='') as csv_to_clean, open(fixed_csv, 'w', newline='') as output_csv:
-        reader = csv.reader(csv_to_clean)
-        writer = csv.writer(output_csv)
-        '''Loop to check if the last part of the row is empty and delete appropriately'''
-        for row in reader:
-            while row and row[-1] == '':
-                row.pop()
-            writer.writerow(row)
-        '''Return fixed sheet'''
-    return fixed_csv
-    
 
 def parse_csv(csv_document):
     """
@@ -253,7 +369,9 @@ def parse_csv(csv_document):
     :rtype: list
     """
     course_data = []
-    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", "Meeting Pattern", "Enrollment", "Maximum Enrollment", "Cross-listings"]
+    relevant_columns = ["Term", "Course", "Section #", "Course Title", "Room", 
+                        "Meeting Pattern", "Enrollment", "Maximum Enrollment", 
+                        "Cross-listings", "Instructor", "Cross-list Maximum"]
 
     # Read and process csv file
     with open(csv_document, mode='r', encoding='utf-8') as infile:
@@ -284,7 +402,10 @@ def parse_csv(csv_document):
                     "Meeting Pattern": row[col_indexes["Meeting Pattern"]],
                     "Enrollment": int(row[col_indexes["Enrollment"]]),  # Convert to int
                     "Maximum Enrollment": int(row[col_indexes["Maximum Enrollment"]]),
-                    "Cross-listings": row[col_indexes["Cross-listings"]].strip()
+                    "Cross-listings": row[col_indexes["Cross-listings"]].strip(),
+                    "Instructor": row[col_indexes["Instructor"]].strip(),
+                    "Cross-list Maximum": int(row[col_indexes["Cross-list Maximum"]]) if row[col_indexes["Cross-list Maximum"]].strip() else 0
+
                 })
     
     # Returns a list of dicts (one dict per class entry)
@@ -365,7 +486,6 @@ def export_to_csv():
     # likely will remove this later. I'm thinking we disable the button if theres no database/problems if possible
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM classes")
 
         # the idea here is to go line by line and copy each line into a list. 
         # if there's something in the first list, process depending on where it is (date, class name, etc.)
@@ -406,7 +526,8 @@ def export_to_csv():
 
                         # data is whatever's in the input csv file
                         data = row
-                        new_enrollment_count = cursor.execute("SELECT enrollment FROM classes WHERE id = ?", (id,))
+                        cursor.execute("SELECT enrollment FROM classes WHERE id = ?", (id,))
+                        new_enrollment_count = cursor.fetchall()[0][0]
                         data[0] = None # so it doesn't get quoted in the csv file
                         data[28] = new_enrollment_count # 28 is the index of the current enrollment count. if there's a more dynamic way to do this in case the data format changes, let's do that instead
 

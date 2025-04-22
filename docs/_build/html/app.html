@@ -48,8 +48,10 @@
 <li class="toctree-l2 current"><a class="current reference internal" href="#">app module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#app.create_tables"><code class="docutils literal notranslate"><span class="pre">create_tables()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.export_to_csv"><code class="docutils literal notranslate"><span class="pre">export_to_csv()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app.fix_csv"><code class="docutils literal notranslate"><span class="pre">fix_csv()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.get_class"><code class="docutils literal notranslate"><span class="pre">get_class()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.get_classes"><code class="docutils literal notranslate"><span class="pre">get_classes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app.get_professors"><code class="docutils literal notranslate"><span class="pre">get_professors()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.insert_csv_into_table"><code class="docutils literal notranslate"><span class="pre">insert_csv_into_table()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.parse_csv"><code class="docutils literal notranslate"><span class="pre">parse_csv()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.update_enrollment"><code class="docutils literal notranslate"><span class="pre">update_enrollment()</span></code></a></li>
@@ -57,8 +59,11 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="import_csv_to_table.html">import_csv_to_table module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="utils.html">utils module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="test_app.html">test_app module</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="jsdoc.html">JSDoc Documentation</a></li>
 </ul>
 
         </div>
@@ -88,14 +93,6 @@
              
   <section id="module-app">
 <span id="app-module"></span><h1>app module<a class="headerlink" href="#module-app" title="Link to this heading"></a></h1>
-<p>This module handles the backend functionality of the application, including:
-- Database connection and management
-- CSV file upload and parsing
-- Class data retrieval and updates
-- Updating enrollment numbers for specific classes
-- Exporting class data to a CSV file
-- Flask server setup and routing
-It includes endpoints for all of the above functionalities, allowing the frontend to interact with the backend seamlessly.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="app.create_tables">
 <span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">create_tables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#create_tables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.create_tables" title="Link to this definition"></a></dt>
@@ -125,6 +122,12 @@ updated class info.</p>
 <dd class="field-even"><p>No database or error accessing records.</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.fix_csv">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">fix_csv</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">csv_document</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#fix_csv"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.fix_csv" title="Link to this definition"></a></dt>
+<dd><p>Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files</p>
 </dd></dl>
 
 <dl class="py function">
@@ -162,6 +165,23 @@ from the <code class="docutils literal notranslate"><span class="pre">classes</s
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>flask.Response</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="app.get_professors">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_professors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">class_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#get_professors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_professors" title="Link to this definition"></a></dt>
+<dd><p>Retrieve the professors associated with a specific class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>class_id</strong> (<em>int</em>) – ID of the class to fetch professors for.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>JSON response containing the list of professors for the specified class.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>flask.Response</p>
 </dd>
 </dl>
 </dd></dl>
