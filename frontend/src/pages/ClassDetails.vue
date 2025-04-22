@@ -25,7 +25,7 @@
                                 <span class="p-4 font-medium text-sm text-gray-700 truncate">Enrollment: {{
                                     options.enrollment }} / {{ options.max_enrollment }}</span>
                                 <span class="p-4 flex justify-end">
-                                    <button @click="selectReassignment(options.room)"
+                                    <button @click="selectReassignment(options)"
                                         class="bg-blue-600 text-white px-2 py-1 text-sm font-semibold rounded hover:bg-blue-500">Select</button>
                                 </span>
                             </li>
@@ -201,7 +201,22 @@ export default {
             } catch (error) {
                 console.error("Failed to load professors:", error);
             }
-        }
+        },
+
+        /**
+         * Sends an action to swap the current class with the selected class.
+         * 
+         * @vue-method
+         * @async
+         * @param room The selected room to swap with
+         */
+        async selectReassignment(swap_id) {
+            try {
+                console.log(swap_id);
+            } catch (error) {
+                console.error("Failed to switch classes:", error);
+            }
+        },
     },
     /**
      * Lifecycle hook: called after the component is mounted.
