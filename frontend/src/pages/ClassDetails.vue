@@ -52,8 +52,17 @@
             <p class="text-2xl"><strong>Section:</strong> {{ classData.section }}</p>
             <p class="text-2xl"><strong>Room:</strong> {{ classData.room }}</p>
             <p class="text-2xl"><strong>Time:</strong> {{ classData.time }}</p>
-            <p class="text-2xl"><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{
-                classData.maxEnrollment }}</p>
+            <p class="text-2xl">
+                <strong>Enrollment:</strong>
+                <!-- Dropdown for updating class enrollment numbers instead of using increments -->
+                <select v-if="classData" v-model.number="classData.currentEnrollment" @change="updateEnrollment($event.target.value)"
+                    class="mx-1 text-black rounded bg-gray-100 border px-1 cursor-pointer">
+                    <!-- loops 1 … maxEnrollment -->
+                    <option v-for="i in classData.maxEnrollment + 10" :key="i" :value="i - 1">{{ i - 1}}</option>
+                </select>
+                / {{ classData.maxEnrollment }}
+            </p>
+
             <p v-if="professors" class="text-2xl"><strong>Professors: </strong>
                 <span v-for="(professor, index) in professors" :key="professor.id" class="text-2xl">
                     {{ professor.first_name }} {{ professor.last_name }}<span v-if="index < professors.length - 1">,
