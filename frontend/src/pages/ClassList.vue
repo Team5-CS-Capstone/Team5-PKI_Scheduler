@@ -7,10 +7,18 @@
                 class="mr-32 px-3 py-2 rounded-lg border border-gray-300 w-96 text-white" v-model="search"
                 @keyup.enter="searchCourses" />
         </div>
+        <!-- Button that allows classes to be filtered-->
+        <button
+            class="mt-24 ml-8 px-4 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-600"
+            @click="toggleFilter"
+            >
+            {{ showOverCapacityFirst ? "Show Default Order" : "Show Over-Capacity First" }}
+        </button>
+
         <!-- Grid for clickable classes -->
         <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4 mt-24 m-8">
             <router-link
-            v-for="course in filteredCourses"
+            v-for="course in sortedCourses"
             :key="course.id"
             :to="'/class/' + course.id"
             :class=" course.currentEnrollment > course.maxEnrollment ? 
@@ -65,7 +73,40 @@ export default {
              * @vue-data {Object[]}
              */
             filteredCourses: [],
+
+            /**
+             * Boolean that allows over-Capacity classes to be shown first
+             */
+            showOverCapacityFirst: false,
         };
+    },
+
+    /**
+     * Section for filtered classes
+     */
+    computed: {
+        sortedCourses() {
+            // If no courses are filtered return empty list
+            if (!this.filteredCourses) return [];
+
+            // When filter toggle is true, sort the classes
+            if (this.showOverCapacityFirst) {
+                return [...this.filteredCourses].sort((a, b) => {
+
+                    // Check if each course is over capacity
+                    const a_over = a.currentEnrollment > a.maxEnrollment
+                    const b_over = b.currentEnrollment > b.maxEnrollment
+
+                    // Subtract booleans to put over-capacity classes atop the list
+                    return b_over - a_over;
+
+                });
+                
+            }
+
+        // If toggle is off, return the courses to original filtered order 
+            return this.filteredCourses;
+        },
     },
 
     /**
@@ -113,6 +154,15 @@ export default {
                 this.courses = null;
                 this.filteredCourses = null;
             }
+        },
+
+        /**
+         * Toggles the sorting behavior for displaying over-capacity classes.
+         * When showOverCapacity is true, the computed property sortedCourses will 
+         * re-sort the list of classes with overenroled classes first
+         */
+         toggleFilter() {
+            this.showOverCapacityFirst = !this.showOverCapacityFirst;
         },
     },
 
