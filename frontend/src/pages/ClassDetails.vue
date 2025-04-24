@@ -212,7 +212,10 @@ export default {
          */
         async selectReassignment(swap_id) {
             try {
-                console.log(swap_id);
+                console.log(this.$route.params.id);
+                console.log(swap_id.id);
+                await axios.post(`http://127.0.0.1:5000/class/${this.$route.params.id}/swap/${swap_id.id}`);
+                // do i call fetchclassdetails here
             } catch (error) {
                 console.error("Failed to switch classes:", error);
             }

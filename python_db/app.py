@@ -146,6 +146,26 @@ def get_class(class_id):
             * **200 OK** – If the class is found, returns a JSON object of class data.
             * **404 Not Found** – If the class is not found, returns a JSON error message.
     """
+    class_data = get_class_details(class_id)
+    if class_data:
+        # serialize and return class data if class is found
+        return jsonify(class_data), 200
+    else:
+        # otherwise provide a 404 error and message along with it 
+        return jsonify({"message": "Class not found"}), 404
+    
+def get_class_details(class_id):
+    """
+    A helper function that returns class details.
+
+    Args:
+        class_id (int):
+            The ID of the class to fetch from the database.
+
+    Returns:
+        dict:
+            A dictionary of class details.
+    """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
@@ -166,11 +186,9 @@ def get_class(class_id):
             "currentEnrollment": row[7],
             "maxEnrollment": row[8]
         }
-        # serialize and return class data if class is found
-        return jsonify(class_data), 200
+        return class_data
     else:
-        # otherwise provide a 404 error and message along with it 
-        return jsonify({"message": "Class not found"}), 404
+        return None
 
 # API Route to receive and handle CSV importing
 @app.route('/upload', methods=['POST'])
@@ -411,7 +429,7 @@ def parse_csv(csv_document):
     # Returns a list of dicts (one dict per class entry)
     return course_data
 
-        
+
 # API Route to update enrollment for a class
 @app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
 def update_enrollment(class_id):
@@ -464,6 +482,50 @@ def update_enrollment(class_id):
     conn.close()
 
     return jsonify({"enrollment": enrollment}), 200
+
+
+# API Route to swap class data
+@app.route("/class/<int:class_id>/swap/<int:swap_id>", methods=["POST"])
+def swap_classes(class_id, swap_id):
+    """
+    Swaps two classes' data.
+    
+    Both classes have to reside in the database.
+
+    :return: JSON response indicating success or an error message.
+    :rtype: flask.Response
+
+    :status 200: Successfully swapped classes
+    :status 400: Failed to swap classes
+    :status 404: One of the classes was not found
+    """
+    # get current class details
+    c1 = get_class_details(class_id)
+    c2 = get_class_details(swap_id)
+
+    if c1 and c2:
+        # only need to swap max enrollment and room
+        temp = [c2["maxEnrollment"], c2["room"]]
+        c2["maxEnrollment"] = c1["maxEnrollment"]
+        c2["room"] = c1["room"]
+        c1["maxEnrollment"] = temp[0]
+        c1["room"] = temp[1]
+
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
+            cursor.execute('UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?', (c1["maxEnrollment"], c1["room"], c1["id"]))
+            cursor.execute('UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?', (c2["maxEnrollment"], c2["room"], c2["id"]))
+            conn.commit()
+            return jsonify('Successfully swapped classes.', 200)
+        except Exception:
+            return jsonify('Failed to insert changes into the database.', 400)
+        finally:
+            conn.close()
+    else:
+        # realistically this shouldn't hit
+        return jsonify('Could not find one of the classes.', 404)
+
 
 @app.route("/export")
 def export_to_csv():
@@ -539,12 +601,13 @@ def export_to_csv():
                         writer.writerow(row)
 
     except Exception:
-        return jsonify("No database exists"), 404
+        return jsonify("No database exists."), 404
     finally:
         conn.close()
-    print("Successfully exported data to file")
-    return jsonify('Successfully exported data to file'), 200
-    
+    print("Successfully exported data to file.")
+    return jsonify('Successfully exported data to file.'), 200
+
+
 # Start the Flask Server
 if __name__ == "__main__":
     app.run(debug=True)
