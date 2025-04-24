@@ -5,7 +5,7 @@
         <div class="bg-white p-4 h- w-8/12 rounded shadow">
             <div class="flex flex-col justify-between h-full items-center bg-white">
                 <div class="w-full p-4 space-y-4 bg-white border rounded">
-                    <p v-if="noReassingmnments" class="text-2xl text-red-600">No available class swaps.</p>
+                    <p v-if="noReassignments" class="text-2xl text-red-600">No available class swaps.</p>
                     <div v-else>
                         <p class="text-2xl text-gray-600 font-semibold pb-4">Select a room to reassign the class:</p>
                         <!-- Column Headers -->
@@ -114,7 +114,7 @@ export default {
              * @vue-data {string[]}
              */
             possibleReassignments: null,
-            noReassingmnments: false,
+            noReassignments: false,
             loadingReassignments: false,
             /**
              * The list of professors associated with the class.
@@ -141,9 +141,9 @@ export default {
                 this.possibleReassignments = response.data;
                 this.ToggleReassignmentModal();
                 if (this.possibleReassignments.length === 0) {
-                    this.noReassingmnments = true;
+                    this.noReassignments = true;
                 } else {
-                    this.noReassingmnments = false;
+                    this.noReassignments = false;
                 }
             } catch (error) {
                 console.error("Failed to load reassignments:", error);
@@ -205,6 +205,7 @@ export default {
 
         /**
          * Sends an action to swap the current class with the selected class.
+         * If a successful swap happens, it updates the current class info and closes the swap selection box.
          * 
          * @vue-method
          * @async
@@ -212,12 +213,19 @@ export default {
          */
         async selectReassignment(swap_id) {
             try {
-                console.log(this.$route.params.id);
-                console.log(swap_id.id);
+                // Swap class information
                 await axios.post(`http://127.0.0.1:5000/class/${this.$route.params.id}/swap/${swap_id.id}`);
-                // do i call fetchclassdetails here
+                console.log('Swapped classes', this.$route.params.id, ' and ', swap_id.id, ' successfully');
+                alert('Successfully swapped classes!');
+
+                // Update current class
+                this.fetchClassDetails();
+
+                // Close the swap selection box
+                this.ToggleReassignmentModal();
             } catch (error) {
                 console.error("Failed to switch classes:", error);
+                alert('Failed to swap classes.');
             }
         },
     },

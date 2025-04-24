@@ -484,7 +484,7 @@ def update_enrollment(class_id):
     return jsonify({"enrollment": enrollment}), 200
 
 
-# API Route to swap class data
+# API Route to swap (relevant) class data
 @app.route("/class/<int:class_id>/swap/<int:swap_id>", methods=["POST"])
 def swap_classes(class_id, swap_id):
     """
@@ -499,12 +499,12 @@ def swap_classes(class_id, swap_id):
     :status 400: Failed to swap classes
     :status 404: One of the classes was not found
     """
-    # get current class details
+    # Get current class details
     c1 = get_class_details(class_id)
     c2 = get_class_details(swap_id)
 
     if c1 and c2:
-        # only need to swap max enrollment and room
+        # Only the max enrollment and room location need to be swapped
         temp = [c2["maxEnrollment"], c2["room"]]
         c2["maxEnrollment"] = c1["maxEnrollment"]
         c2["room"] = c1["room"]
