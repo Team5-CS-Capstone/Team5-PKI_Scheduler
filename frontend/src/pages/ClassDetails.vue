@@ -87,10 +87,13 @@
                 </button>
             </div>
 
-            <div v-if="classData" class="flex w-full">
-                <span @click="fetchPossibleReassignments(classData.id)"
-                    class="hover:bg-yellow-500 flex items-center justify-center font-semibold w-full h-10  bg-yellow-200 rounded-xl text-center border-2 border-yellow-700 cursor-pointer">
-                    Check Reassignment Options
+            <div v-if="classData" class="flex flex-col hover:bg-yellow-500 w-full bg-yellow-200  border-2 border-yellow-700 cursor-pointer" @click="fetchPossibleReassignments(classData.id)">
+                <span 
+                    class="flex items-center justify-center font-semibold w-full h-10 rounded-xl text-center">
+                    Possible Manual Reassignments
+                </span>
+                <span class="text-black text-xs text-wrap text-center text-align-center p-2"> 
+                    (Keep in mind that this only considers simple swaps and doesn't find BEST swaps.)
                 </span>
             </div>
         </div>
