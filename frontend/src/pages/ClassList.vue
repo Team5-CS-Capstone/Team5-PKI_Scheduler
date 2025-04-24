@@ -9,7 +9,7 @@
         </div>
         <!-- Button that allows classes to be filtered-->
         <button
-            class="mt-24 ml-8 px-4 py-2 bg-yellow-500 text-black font-semibold rounded hover:bg-yellow-600"
+            class="mt-24 ml-8 px-4 py-2 bg-blue-400 text-black font-semibold rounded hover:bg-blue-600"
             @click="toggleFilter"
             >
             {{ showOverCapacityFirst ? "Show Default Order" : "Show Over-Capacity First" }}
