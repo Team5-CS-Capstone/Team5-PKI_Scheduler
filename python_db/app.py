@@ -450,7 +450,7 @@ def update_enrollment(class_id):
     enrollment, max_enrollment = row
 
     if action == "add":
-        if enrollment < max_enrollment:
+        if (enrollment + 1) <= (max_enrollment + 9):
             enrollment += 1
         else:
             conn.close()
