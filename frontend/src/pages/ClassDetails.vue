@@ -52,8 +52,17 @@
             <p class="text-2xl"><strong>Section:</strong> {{ classData.section }}</p>
             <p class="text-2xl"><strong>Room:</strong> {{ classData.room }}</p>
             <p class="text-2xl"><strong>Time:</strong> {{ classData.time }}</p>
-            <p class="text-2xl"><strong>Enrollment:</strong> {{ classData.currentEnrollment }} / {{
-                classData.maxEnrollment }}</p>
+            <p class="text-2xl">
+                <strong>Enrollment:</strong>
+                <!-- Dropdown for updating class enrollment numbers instead of using increments -->
+                <select v-if="classData" v-model.number="classData.currentEnrollment" @change="updateEnrollment($event.target.value)"
+                    class="mx-1 text-black rounded bg-gray-100 border px-1 cursor-pointer">
+                    <!-- loops 1 … maxEnrollment -->
+                    <option v-for="i in classData.maxEnrollment + 10" :key="i" :value="i - 1">{{ i - 1}}</option>
+                </select>
+                / {{ classData.maxEnrollment }}
+            </p>
+
             <p v-if="professors" class="text-2xl"><strong>Professors: </strong>
                 <span v-for="(professor, index) in professors" :key="professor.id" class="text-2xl">
                     {{ professor.first_name }} {{ professor.last_name }}<span v-if="index < professors.length - 1">,
@@ -78,10 +87,13 @@
                 </button>
             </div>
 
-            <div v-if="classData" class="flex w-full">
-                <span @click="fetchPossibleReassignments(classData.id)"
-                    class="hover:bg-yellow-500 flex items-center justify-center font-semibold w-full h-10  bg-yellow-200 rounded-xl text-center border-2 border-yellow-700 cursor-pointer">
-                    Check Reassignment Options
+            <div v-if="classData" class="flex flex-col hover:bg-yellow-500 w-full bg-yellow-200  border-2 border-yellow-700 cursor-pointer" @click="fetchPossibleReassignments(classData.id)">
+                <span 
+                    class="flex items-center justify-center font-semibold w-full h-10 rounded-xl text-center">
+                    Possible Manual Reassignments
+                </span>
+                <span class="text-black text-xs text-wrap text-center text-align-center p-2"> 
+                    (Keep in mind that this only considers simple swaps and doesn't find BEST swaps.)
                 </span>
             </div>
         </div>

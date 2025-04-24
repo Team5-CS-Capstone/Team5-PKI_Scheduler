@@ -5,6 +5,8 @@ import pandas as pd
 import os
 import csv
 import datetime
+from pathlib import Path
+from werkzeug.utils import secure_filename
 
 # Importing utility functions from utils.py
 from utils import parse_instructor, get_or_create_professor, fix_csv
@@ -22,8 +24,9 @@ CORS(app, supports_credentials=True)
 # Our SQLite database file
 DB_FILE = "database.db"
 # Document Uploads file
-UPLOAD_FOLDER = "uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Ensure uploads directory exists
+BASE_DIR       = Path(__file__).resolve().parent          # folder that holds app.py
+UPLOAD_DIR     = BASE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
 
 @app.route("/class/<int:class_id>/possible-reassignments", methods=["GET"])
 def get_possible_reassignments(class_id):
@@ -208,7 +211,7 @@ def upload_file():
     
     file = request.files['file']
     global file_path # make sure the file path is global so we can access it later
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
     file.save(file_path)  # Save file in uploads folder
 
     # Parse CSV file
@@ -476,6 +479,12 @@ def update_enrollment(class_id):
         else:
             conn.close()
             return jsonify({"message": "Class is empty"}), 400
+    else:
+        try:
+            enrollment = int(action)  # Set enrollment to a specific number
+        except ValueError:
+            conn.close()
+            return jsonify({"message": "Invalid action"}), 400
         
     cursor.execute("UPDATE classes SET enrollment = ? WHERE id = ?", (enrollment, class_id))
     conn.commit()
