@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>test_app module &mdash; PKI Scheduler - Team 5 0.0.1 documentation</title>
+  <title>algorithm module &mdash; PKI Scheduler - Team 5 0.0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -19,8 +19,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="algorithm module" href="algorithm.html" />
-    <link rel="prev" title="utils module" href="utils.html" /> 
+    <link rel="next" title="JSDoc Documentation" href="jsdoc.html" />
+    <link rel="prev" title="test_app module" href="test_app.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -48,13 +48,12 @@
 <li class="toctree-l2"><a class="reference internal" href="app.html">app module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="import_csv_to_table.html">import_csv_to_table module</a></li>
 <li class="toctree-l2"><a class="reference internal" href="utils.html">utils module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">test_app module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#test_app.client"><code class="docutils literal notranslate"><span class="pre">client()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#test_app.setup_database"><code class="docutils literal notranslate"><span class="pre">setup_database()</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#test_app.test_get_classes"><code class="docutils literal notranslate"><span class="pre">test_get_classes()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="test_app.html">test_app module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">algorithm module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#algorithm.recommend_swaps_per_timeslot"><code class="docutils literal notranslate"><span class="pre">recommend_swaps_per_timeslot()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#algorithm.recommended_swaps_if_no_swaps_in_same_timeslot"><code class="docutils literal notranslate"><span class="pre">recommended_swaps_if_no_swaps_in_same_timeslot()</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="algorithm.html">algorithm module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="jsdoc.html">JSDoc Documentation</a></li>
@@ -75,9 +74,9 @@
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
           <li class="breadcrumb-item"><a href="modules.html">python-db</a></li>
-      <li class="breadcrumb-item active">test_app module</li>
+      <li class="breadcrumb-item active">algorithm module</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/test_app.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/algorithm.rst.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -85,22 +84,24 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-test_app">
-<span id="test-app-module"></span><h1>test_app module<a class="headerlink" href="#module-test_app" title="Link to this heading"></a></h1>
+  <section id="module-algorithm">
+<span id="algorithm-module"></span><h1>algorithm module<a class="headerlink" href="#module-algorithm" title="Link to this heading"></a></h1>
 <dl class="py function">
-<dt class="sig sig-object py" id="test_app.client">
-<span class="sig-prename descclassname"><span class="pre">test_app.</span></span><span class="sig-name descname"><span class="pre">client</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/test_app.html#client"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#test_app.client" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="algorithm.recommend_swaps_per_timeslot">
+<span class="sig-prename descclassname"><span class="pre">algorithm.</span></span><span class="sig-name descname"><span class="pre">recommend_swaps_per_timeslot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/algorithm.html#recommend_swaps_per_timeslot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#algorithm.recommend_swaps_per_timeslot" title="Link to this definition"></a></dt>
+<dd><p>This function will read the SQLite database, fetch all classes, and recommend swaps for each timeslot.
+For example if a specific timeslot within PKI has 1-2 classes that are full capacity it will try to
+find a class that is not full capacity and suggest a swap. It will need to continue to do this until
+all classes enrollments are below the maximum capacity (unless its impossible to do so).</p>
+</dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="test_app.setup_database">
-<span class="sig-prename descclassname"><span class="pre">test_app.</span></span><span class="sig-name descname"><span class="pre">setup_database</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/test_app.html#setup_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#test_app.setup_database" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="test_app.test_get_classes">
-<span class="sig-prename descclassname"><span class="pre">test_app.</span></span><span class="sig-name descname"><span class="pre">test_get_classes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/test_app.html#test_get_classes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#test_app.test_get_classes" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dt class="sig sig-object py" id="algorithm.recommended_swaps_if_no_swaps_in_same_timeslot">
+<span class="sig-prename descclassname"><span class="pre">algorithm.</span></span><span class="sig-name descname"><span class="pre">recommended_swaps_if_no_swaps_in_same_timeslot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">not_swappable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/algorithm.html#recommended_swaps_if_no_swaps_in_same_timeslot"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#algorithm.recommended_swaps_if_no_swaps_in_same_timeslot" title="Link to this definition"></a></dt>
+<dd><p>Try to place still-crowded classes into another slot/room.
+A move is legal only if the crowded class’s professor is free
+in the target slot AND the target professor stays conflict-free.</p>
+</dd></dl>
 
 </section>
 
@@ -108,8 +109,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="utils.html" class="btn btn-neutral float-left" title="utils module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="algorithm.html" class="btn btn-neutral float-right" title="algorithm module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="test_app.html" class="btn btn-neutral float-left" title="test_app module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="jsdoc.html" class="btn btn-neutral float-right" title="JSDoc Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

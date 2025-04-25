@@ -1,0 +1,333 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>algorithm &mdash; PKI Scheduler - Team 5 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PKI Scheduler - Team 5
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">python-db</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../jsdoc.html">JSDoc Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PKI Scheduler - Team 5</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">algorithm</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for algorithm</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_professors</span>
+
+<div class="viewcode-block" id="recommend_swaps_per_timeslot">
+<a class="viewcode-back" href="../algorithm.html#algorithm.recommend_swaps_per_timeslot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">recommend_swaps_per_timeslot</span><span class="p">(</span><span class="n">db_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function will read the SQLite database, fetch all classes, and recommend swaps for each timeslot.</span>
+<span class="sd">    For example if a specific timeslot within PKI has 1-2 classes that are full capacity it will try to </span>
+<span class="sd">    find a class that is not full capacity and suggest a swap. It will need to continue to do this until</span>
+<span class="sd">    all classes enrollments are below the maximum capacity (unless its impossible to do so).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cur</span>  <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT id, course_number, room,</span>
+<span class="s2">            meeting_pattern,</span>
+<span class="s2">            enrollment, max_enrollment</span>
+<span class="s2">        FROM classes</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># group classes by meeting pattern (timeslot)</span>
+    <span class="n">slots</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">slots</span><span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span>         <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;course_num&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s2">&quot;room&quot;</span><span class="p">:</span>       <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s2">&quot;enrollment&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+            <span class="s2">&quot;capacity&quot;</span><span class="p">:</span>   <span class="n">r</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="p">})</span>
+
+    <span class="n">recommendations</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">couldnt_find_swap</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">slot</span><span class="p">,</span> <span class="n">classes</span> <span class="ow">in</span> <span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">overfull</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">classes</span> <span class="k">if</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">]]</span>
+
+        <span class="c1"># if no classes in this specific timeslot are full capacity</span>
+        <span class="c1"># then we don&#39;t need to do anything </span>
+        <span class="c1"># and can skip to the next timeslot</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">overfull</span><span class="p">:</span>
+            <span class="k">continue</span>                               
+
+        <span class="c1"># rooms sorted by spare seats DESC</span>
+        <span class="n">spare_sorted</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="n">classes</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">],</span>
+            <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+
+        <span class="n">slot_recs</span>   <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">used_target</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>                       
+
+        <span class="k">for</span> <span class="n">crowded</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">overfull</span><span class="p">,</span>
+                            <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">],</span>
+                            <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+            <span class="n">target</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">spare_sorted</span>
+                    <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span>      
+                    <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">used_target</span>
+                <span class="p">),</span>
+                <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">target</span><span class="p">:</span>
+                <span class="n">slot_recs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;crowded_id&quot;</span><span class="p">:</span>     <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;crowded_room&quot;</span><span class="p">:</span>   <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;crowded_class_name&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_id&quot;</span><span class="p">:</span>      <span class="n">target</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_room&quot;</span><span class="p">:</span>    <span class="n">target</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_class_name&quot;</span><span class="p">:</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">crowded</span><span class="p">[</span><span class="s1">&#39;enrollment&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> students need &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;capacity&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">-seat room&quot;</span><span class="p">)</span>
+                <span class="p">})</span>
+                <span class="n">used_target</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span>
+                <span class="n">spare_sorted</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># add the crowded class that failed to find a swap</span>
+                <span class="c1"># to the find swap list so we can try to find a swap</span>
+                <span class="c1"># in another timeslot</span>
+                <span class="n">couldnt_find_swap</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;course_num&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;room&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;enrollment&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;capacity&quot;</span><span class="p">:</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;slot&quot;</span><span class="p">:</span> <span class="n">slot</span>
+                <span class="p">})</span>
+
+        <span class="k">if</span> <span class="n">slot_recs</span><span class="p">:</span>
+            <span class="n">recommendations</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span> <span class="o">=</span> <span class="n">slot_recs</span>
+
+    <span class="k">return</span> <span class="n">recommendations</span><span class="p">,</span> <span class="n">couldnt_find_swap</span></div>
+
+
+<div class="viewcode-block" id="recommended_swaps_if_no_swaps_in_same_timeslot">
+<a class="viewcode-back" href="../algorithm.html#algorithm.recommended_swaps_if_no_swaps_in_same_timeslot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">recommended_swaps_if_no_swaps_in_same_timeslot</span><span class="p">(</span><span class="n">db_path</span><span class="p">,</span> <span class="n">not_swappable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Try to place still-crowded classes into another slot/room.</span>
+<span class="sd">    A move is legal only if the crowded class&#39;s professor is free</span>
+<span class="sd">    in the target slot AND the target professor stays conflict-free.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">            SELECT c.id, c.room, c.meeting_pattern,</span>
+<span class="s2">            c.enrollment, c.max_enrollment, c.course_number,</span>
+<span class="s2">            p.id                 AS professor_id</span>
+<span class="s2">            FROM   classes            c</span>
+<span class="s2">            JOIN   class_professors   cp ON cp.class_id = c.id</span>
+<span class="s2">            JOIN   professors         p  ON p.id = cp.professor_id</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+    <span class="c1"># create dicts to hold class data</span>
+    <span class="c1"># and professor schedules</span>
+    <span class="c1"># and a list of classes in each slot</span>
+    <span class="n">classes</span>      <span class="o">=</span> <span class="p">{}</span>                         
+    <span class="n">class_prof</span>   <span class="o">=</span> <span class="p">{}</span>                        
+    <span class="n">prof_busy</span>    <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>           
+    <span class="n">slots</span>        <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>          
+    
+    <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span>       <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;room&quot;</span><span class="p">:</span>     <span class="n">r</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s2">&quot;slot&quot;</span><span class="p">:</span>     <span class="n">r</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s2">&quot;enroll&quot;</span><span class="p">:</span>   <span class="n">r</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span>
+            <span class="s2">&quot;cap&quot;</span><span class="p">:</span>      <span class="n">r</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span>
+            <span class="s2">&quot;prof_id&quot;</span><span class="p">:</span>  <span class="n">r</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span>
+            <span class="s2">&quot;course_num&quot;</span><span class="p">:</span> <span class="n">r</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="p">}</span>
+        <span class="n">classes</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">c</span>
+        <span class="n">class_prof</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]</span>
+        <span class="n">prof_busy</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">])</span>
+        <span class="n">slots</span><span class="p">[</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+    <span class="c1"># remove classes that are already in a swap</span>
+    <span class="c1"># and classes that are not over capacity</span>
+    <span class="n">recommendations</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">crowded</span> <span class="ow">in</span> <span class="n">not_swappable</span><span class="p">:</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">classes</span><span class="p">[</span><span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span>
+        <span class="n">c_prof</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">slot</span><span class="p">,</span> <span class="n">candidates</span> <span class="ow">in</span> <span class="n">slots</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">slot</span> <span class="o">==</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]:</span>
+                <span class="k">continue</span>                     <span class="c1"># must be different slot</span>
+            <span class="k">if</span> <span class="n">slot</span> <span class="ow">in</span> <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">]:</span>
+                <span class="k">continue</span>                     <span class="c1"># professor already busy</span>
+
+            <span class="c1"># candidate class / room large enough?</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">candidates</span>
+                        <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;cap&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;enroll&quot;</span><span class="p">]</span>
+                        <span class="ow">and</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span>
+                        <span class="ow">and</span> <span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">])</span>
+                        <span class="ow">and</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prof_busy</span><span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]])</span>
+                        <span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">target</span><span class="p">:</span>
+                <span class="n">recommendations</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;old_slot&quot;</span><span class="p">:</span>       <span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;new_slot&quot;</span><span class="p">:</span>       <span class="n">slot</span><span class="p">,</span>
+                    <span class="s2">&quot;crowded_id&quot;</span><span class="p">:</span>     <span class="n">c</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;crowded_room&quot;</span><span class="p">:</span>   <span class="n">c</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;crowded_class_name&quot;</span><span class="p">:</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_class_name&quot;</span><span class="p">:</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_id&quot;</span><span class="p">:</span>      <span class="n">target</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_room&quot;</span><span class="p">:</span>    <span class="n">target</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;enroll&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> students need </span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;cap&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">-seat &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;room; professor </span><span class="si">{</span><span class="n">c_prof</span><span class="si">}</span><span class="s2"> free at </span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="p">})</span>
+                <span class="c1"># update professor schedules so later moves respect this swap</span>
+                <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">slot</span><span class="p">)</span>
+                <span class="k">break</span>                      
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">recommendations</span><span class="p">)</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+    <span class="n">DB_FILE</span> <span class="o">=</span> <span class="s2">&quot;database.db&quot;</span>
+
+    <span class="c1"># Find same slot swaps first to avoid unnecessary cross-slot swaps</span>
+    <span class="n">same</span><span class="p">,</span> <span class="n">not_swappable</span> <span class="o">=</span> <span class="n">recommend_swaps_per_timeslot</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">same</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== SAME-SLOT RECOMMENDATIONS ===&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">same</span><span class="p">):</span>                          <span class="c1"># keep order tidy</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">same</span><span class="p">[</span><span class="n">slot</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • </span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)  →  &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">No same-slot swaps found.&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Secondly try to find cross-slot swaps for classes that couldn&#39;t be moved</span>
+    <span class="c1"># in the same slot</span>
+    <span class="k">if</span> <span class="n">not_swappable</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== STILL OVER CAPACITY ===&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">not_swappable</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;course_num&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> in </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;enrollment&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;capacity&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">) at </span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;slot&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">No classes left over capacity.&quot;</span><span class="p">)</span>
+
+    <span class="n">cross</span> <span class="o">=</span> <span class="n">recommended_swaps_if_no_swaps_in_same_timeslot</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">,</span> <span class="n">not_swappable</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">cross</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== CROSS-SLOT RECOMMENDATIONS ===&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cross</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">cross</span><span class="p">[</span><span class="n">slot</span><span class="p">]:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • </span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)  →  &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">No cross-slot swaps needed.&quot;</span><span class="p">)</span>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Charlie, Zaid, Brian, John, Brady.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

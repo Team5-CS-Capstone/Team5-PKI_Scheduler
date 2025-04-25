@@ -73,7 +73,7 @@
 <span></span><span class="c1"># This file is used for utility functions that are used in the app.py file.</span>
 <span class="c1"># It contains mostly functions to parse / regularize data from the csv file and insert it into the database.</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span><span class="o">,</span><span class="w"> </span><span class="nn">csv</span>
 
 <div class="viewcode-block" id="parse_instructor">
 <a class="viewcode-back" href="../utils.html#utils.parse_instructor">[docs]</a>
@@ -114,7 +114,7 @@
 
 <div class="viewcode-block" id="get_or_create_professor">
 <a class="viewcode-back" href="../utils.html#utils.get_or_create_professor">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">get_or_create_professor</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">p_id</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_or_create_professor</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">p_id</span><span class="p">,</span> <span class="n">class_id</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Get or create a professor in the database.</span>
 <span class="sd">    This function will check if the professor already exists in the database</span>
@@ -125,12 +125,41 @@
 
     <span class="k">if</span> <span class="n">professor</span><span class="p">:</span>
         <span class="c1"># Professor already exists, return the existing entry</span>
-        <span class="k">return</span> <span class="n">professor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># use this id to insert into the class_professors table</span>
+        <span class="n">professor_id</span> <span class="o">=</span> <span class="n">professor</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;INSERT INTO professors(first_name, last_name, p_id) VALUES(?, ?, ?)&quot;</span><span class="p">,</span>
+        <span class="c1"># Professor does not exist, insert a new entry</span>
+        <span class="c1"># and get this id to insert into the class_professors table</span>
+        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;INSERT OR IGNORE INTO professors(first_name, last_name, p_id) VALUES(?, ?, ?)&quot;</span><span class="p">,</span>
                     <span class="p">(</span><span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">p_id</span><span class="p">))</span>
-        <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">lastrowid</span></div>
+        <span class="n">professor_id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">lastrowid</span>    
 
+    <span class="c1"># Insert the class-professor relationship into the class_professors table</span>
+    <span class="c1"># if the professor already exists</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;INSERT OR IGNORE INTO class_professors (class_id, professor_id)</span>
+<span class="s2">                            VALUES (?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class_id</span><span class="p">,</span> <span class="n">professor_id</span><span class="p">))</span> </div>
+
+
+<span class="w">    </span>
+<span class="sd">&#39;&#39;&#39;Function to fix the trailing commas in the csv&#39;&#39;&#39;</span>
+<div class="viewcode-block" id="fix_csv">
+<a class="viewcode-back" href="../utils.html#utils.fix_csv">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fix_csv</span><span class="p">(</span><span class="n">csv_document</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files&#39;&#39;&#39;</span>
+    <span class="n">fixed_csv</span> <span class="o">=</span> <span class="n">csv_document</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;-fix.csv&quot;</span><span class="p">)</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;Open the csv doc and the output file temporarily created&#39;&#39;&#39;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_document</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csv_to_clean</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">fixed_csv</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_csv</span><span class="p">:</span>
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csv_to_clean</span><span class="p">)</span>
+        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output_csv</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Loop to check if the last part of the row is empty and delete appropriately&#39;&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
+            <span class="k">while</span> <span class="n">row</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">row</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;Return fixed sheet&#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="n">fixed_csv</span></div>
+
+    
 </pre></div>
 
            </div>
