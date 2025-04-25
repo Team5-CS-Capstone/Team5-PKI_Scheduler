@@ -83,6 +83,7 @@ Example of an endpoint that takes in a parameter for class ID below:
 | `/export`     | `PUT`      | Exports classes from the database into a CSV |
 | `/class/<id>/professors`     | `GET`      | Retrieves the profs associated with a specific class |
 | `/class/<id>/possible-reassignments`     | `GET`      | Retrieves the possible class swaps for a specific class |
+| `/class/<id>/swap/<swap_id>`     | `PUT`     | Swaps room and max enrollment between the classes with ids <id> and <class_id>|
 
 
 ## SQLite Database Installation/Recommendations 
@@ -127,7 +128,7 @@ Our branching strategy is very simple: each user has their branch which they pus
 -   Overshot on github actions as tests haven't been created just yet
 
 
-### Milestone #3:
+#### Milestone #3:
 - Reformatting of the Crosslist section
 - CSV file cleaning feature, and removal of trailing lines
 - Dynamic generation of a course cross list dictionary
@@ -135,3 +136,16 @@ Our branching strategy is very simple: each user has their branch which they pus
 - Documentation Pages for front and backend
 - Tests set up and ready to start unit tests
 - Color feature implented to indicate if current enrollment is above maximum
+
+
+#### Milestone #4:
+- Issue with enrollment in crosslisted classes fixed
+- New database linking professor IDs and class IDs
+  - Classes can have multiple professors (TAs) and multiple professors can teach multiple classes
+- API endpoint to call professor(s) from class ID
+- Professor(s) for class now displayed on the class details page
+- Filter by classes with enrollment past maximum first
+- Dropdown menu to select amount of students in class
+- **Very** basic algorithm implemented for determining sufficient class locations
+- Menu to select a class to swap with
+- API endpoint to swap necessary class information
