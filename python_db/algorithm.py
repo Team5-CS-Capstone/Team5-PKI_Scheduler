@@ -1,5 +1,9 @@
 from collections import defaultdict
 from app import get_professors
+import os
+import datetime
+
+swap_file = os.path.join(os.path.dirname(__file__), "section_swaps.txt")
 
 def recommend_swaps_per_timeslot(db_path):
     """
@@ -78,6 +82,17 @@ def recommend_swaps_per_timeslot(db_path):
                     "reason": (f"{crowded['enrollment']} students need "
                             f"{target['capacity']}-seat room")
                 })
+
+                log_swap = (
+                    f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S}  "
+                    f"{slot}:  "
+                    f"{crowded['course_num']} ({crowded['room']}) -> "
+                    f"{target['course_num']} ({target['room']})\n"
+                    )
+                
+                with open(swap_file, "a") as logfile:
+                    logfile.write(log_swap)
+
                 used_target.add(target["id"])
                 spare_sorted.remove(target)
             else:
@@ -175,6 +190,17 @@ def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
                     "reason": (f"{c['enroll']} students need {target['cap']}-seat "
                     f"room; professor {c_prof} free at {slot}")
                 })
+
+                log_swap = (
+                    f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S}  "
+                    f"{slot}:  "
+                    f"{crowded['course_num']} ({crowded['room']}) -> "
+                    f"{target['course_num']} ({target['room']})\n"
+                    )
+                
+                with open(swap_file, "a") as logfile:
+                    logfile.write(log_swap)
+
                 # update professor schedules so later moves respect this swap
                 prof_busy[c_prof].add(slot)
                 break                      
