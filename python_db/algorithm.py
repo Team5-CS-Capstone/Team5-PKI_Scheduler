@@ -1,4 +1,5 @@
 from collections import defaultdict
+import sqlite3
 
 def recommend_swaps_per_timeslot(db_path):
     """
@@ -76,7 +77,112 @@ def recommend_swaps_per_timeslot(db_path):
         if slot_recs:
             recommendations[slot] = slot_recs
 
-    return recommendations
+    return recommendations, couldnt_find_swap
+
+def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
+    """
+    Try to place still-crowded classes into another slot/room.
+    A move is legal only if the crowded class's professor is free
+    in the target slot AND the target professor stays conflict-free.
+    """
+
+    with sqlite3.connect(db_path) as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT c.id, c.room, c.meeting_pattern,
+            c.enrollment, c.max_enrollment, c.course_number,
+            p.id                 AS professor_id
+            FROM   classes            c
+            JOIN   class_professors   cp ON cp.class_id = c.id
+            JOIN   professors         p  ON p.id = cp.professor_id
+        """)
+        rows = cur.fetchall()
+
+    # create dicts to hold class data
+    # and professor schedules
+    # and a list of classes in each slot
+    classes = {}                         
+    class_prof = {}                        
+    prof_busy = defaultdict(set)           
+    slots = defaultdict(list)    
+    swapped = set()                       # classes already swapped     
+    
+    for r in rows:
+        c = {
+            "id":       r[0],
+            "room":     r[1],
+            "slot":     r[2],
+            "enroll":   r[3],
+            "cap":      r[4],
+            "prof_id":  r[6],
+            "course_num": r[5]
+        }
+        classes[c["id"]] = c
+        class_prof[c["id"]] = c["prof_id"]
+        prof_busy[c["prof_id"]].add(c["slot"])
+        slots[c["slot"]].append(c)
+
+    # remove classes that are already in a swap
+    # and classes that are not over capacity
+    recommendations = defaultdict(list)
+
+    for crowded in not_swappable:
+        if crowded["id"] in swapped:          # already handled in a swap
+            continue
+
+        c = classes[crowded["id"]]
+        c_prof = c["prof_id"]
+
+        for slot, candidates in slots.items():
+            if slot == c["slot"]:
+                continue                     # must be different slot
+            if slot in prof_busy[c_prof]:
+                continue                     # professor already busy
+
+            # candidate class / room large enough?
+            target = next((t for t in candidates
+                        if t["cap"] >= c["enroll"]
+                        and t["room"] != c["room"]
+                        and (t["slot"] not in prof_busy[c_prof])
+                        and (c["slot"] not in prof_busy[t["prof_id"]])
+                        ), None)
+
+            if target:
+                # 1. capture originals
+                orig_slot, orig_room, orig_cap = c["slot"], c["room"], c["cap"]
+                tgt_slot, tgt_room, tgt_cap = target["slot"], target["room"], target["cap"]
+
+                # 2. swap in your classes dict
+                c.update(slot=tgt_slot, room=tgt_room, cap=tgt_cap)
+                target.update(slot=orig_slot, room=orig_room, cap=orig_cap)
+
+                # 3. update your slots mapping
+                slots[orig_slot].remove(c)         # remove c from its old slot list
+                slots[tgt_slot].append(c)          # add c to new slot list
+
+                slots[tgt_slot].remove(target)     # remove target from its old slot list
+                slots[orig_slot].append(target)    # add target to c's old slot
+
+                recommendations[slot].append({
+                    "old_slot":       c["slot"],
+                    "new_slot":       slot,
+                    "crowded_id":     c["id"],
+                    "crowded_room":   c["room"],
+                    "crowded_class_name": c["course_num"],
+                    "target_class_name": target["course_num"],
+                    "target_id":      target["id"],
+                    "target_room":    target["room"],
+                    "reason": (f"{c['enroll']} students need {target['cap']}-seat "
+                    f"room; professor {c_prof} free at {slot}")
+                })
+                # update professor schedules so later moves respect this swap
+                prof_busy[c_prof].add(tgt_slot)
+                prof_busy[target["prof_id"]].add(orig_slot)
+                swapped.update({c["id"], target["id"]})
+                break                      
+
+    return dict(recommendations)
+
 
 if __name__ == "__main__":
     import sqlite3
