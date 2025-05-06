@@ -1,6 +1,6 @@
 <!-- CsvUploadAndAlgo.vue -->
 <template>
-  <div class="flex flex-col items-center">
+  <div class="flex flex-col items-center h-screen overflow-scroll bg-gray-100">
     <!-- UNO logo -->
     <img src="../assets/uno-logo.png" class="h-96 mt-12" alt="UNO logo" />
 
@@ -18,23 +18,36 @@
       </button>
     </div>
 
-    <div class="text-black" v-if="algoResults">
+    <div class="text-black h-96" v-if="algoResults">
       <h2 class="mt-12 text-2xl font-semibold">Algorithm Results</h2>
       <div class="mt-4 bg-gray-100 p-4 rounded-lg shadow-md">
-        <pre>{{ algoResults.same_slot_swaps }}</pre>
-        
+        <h3 class="text-red-500 text-2xl font-semibold">Same Slot Recommendations</h3>
         <div
           v-for="(recs, slot) in algoResults.same_slot_swaps"
           :key="slot"
-          class="mt-4"
-        >          <h3 class="font-semibold">{{ slot }}</h3>
+          class="mt-4">          
+          <h3 class="font-semibold">{{ slot }}</h3>
           <ul class="list-disc pl-6">
             <li
               v-for="rec in recs"
-              :key="rec.crowded_id + '-' + rec.target_id"
-            >
+              :key="rec.crowded_id + '-' + rec.target_id">
               {{ rec.crowded_class_name }} ({{ rec.crowded_room }})
-              → {{ rec.target_class_name }} ({{ rec.target_room }})
+              → {{ rec.target_class_name }} ({{ rec.target_room }})
+            </li>
+          </ul>
+        </div>
+        <h3 class="mt-12 text-red-500 text-2xl font-semibold">Cross Slot Recommendations</h3>
+        <div
+          v-for="(recs, slot) in algoResults.cross_slot_recommendations"
+          :key="slot"
+          class="mt-4">          
+          <h3 class="font-semibold">{{ slot }}</h3>
+          <ul class="list-disc pl-6">
+            <li
+              v-for="rec in recs"
+              :key="rec.crowded_id + '-' + rec.target_id">
+              {{ rec.crowded_class_name }} ({{ rec.crowded_room }})
+              → {{ rec.target_class_name }} ({{ rec.target_room }})
             </li>
           </ul>
         </div>

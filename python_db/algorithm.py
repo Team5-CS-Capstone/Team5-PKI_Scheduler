@@ -62,6 +62,7 @@ def recommend_swaps_per_timeslot(db_path):
                     r for r in spare_sorted
                     if r["room"] != crowded["room"]      
                     and r["capacity"] >= crowded["enrollment"]
+                    and crowded["capacity"] >= r["enrollment"]
                     and r["id"] not in used_target
                 ),
                 None
@@ -124,7 +125,8 @@ def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
     class_prof = {}                        
     prof_busy = defaultdict(set)           
     slots = defaultdict(list)    
-    swapped = set()                       # classes already swapped     
+    swapped = set() # classes already swapped   
+    taken_target = set() # classes already in a target slot  
     
     for r in rows:
         c = {
@@ -161,6 +163,9 @@ def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
             # candidate class / room large enough?
             target = next((t for t in candidates
                         if t["cap"] >= c["enroll"]
+                        and t["id"] not in swapped
+                        and t["id"] not in taken_target
+                        and c["cap"] >= t["enroll"]
                         and t["room"] != c["room"]
                         and (t["slot"] not in prof_busy[c_prof])
                         and (c["slot"] not in prof_busy[t["prof_id"]])
@@ -175,25 +180,27 @@ def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
                 c.update(slot=tgt_slot, room=tgt_room, cap=tgt_cap)
                 target.update(slot=orig_slot, room=orig_room, cap=orig_cap)
 
-                # 3. update your slots mapping
+                # 3. build the recommendation **before** altering the slots dict,
+                # and use the saved variables so nothing is lost
+                recommendations[orig_slot].append({
+                    "old_slot":       orig_slot,          # where the crowded class started
+                    "new_slot":       tgt_slot,           # where it will move
+                    "crowded_id":     c["id"],
+                    "crowded_room":   orig_room,
+                    "crowded_class_name": c["course_num"],
+                    "target_class_name":  target["course_num"],
+                    "target_id":      target["id"],
+                    "target_room":    tgt_room,
+                    "reason": (f"{c['enroll']} students need {tgt_cap}-seat room; "
+                            f"professor {c_prof} free at {tgt_slot}")
+                })
+                # 4. update slots mapping
                 slots[orig_slot].remove(c)         # remove c from its old slot list
                 slots[tgt_slot].append(c)          # add c to new slot list
 
                 slots[tgt_slot].remove(target)     # remove target from its old slot list
                 slots[orig_slot].append(target)    # add target to c's old slot
 
-                recommendations[slot].append({
-                    "old_slot":       c["slot"],
-                    "new_slot":       slot,
-                    "crowded_id":     c["id"],
-                    "crowded_room":   c["room"],
-                    "crowded_class_name": c["course_num"],
-                    "target_class_name": target["course_num"],
-                    "target_id":      target["id"],
-                    "target_room":    target["room"],
-                    "reason": (f"{c['enroll']} students need {target['cap']}-seat "
-                    f"room; professor {c_prof} free at {slot}")
-                })
                 # update professor schedules so later moves respect this swap
                 prof_busy[c_prof].add(tgt_slot)
                 prof_busy[target["prof_id"]].add(orig_slot)
@@ -237,7 +244,6 @@ if __name__ == "__main__":
     if cross:
         print("\n=== CROSS-SLOT RECOMMENDATIONS ===")
         for slot in sorted(cross):
-            print(f"{slot}:")
             for rec in cross[slot]:
                 print(f"  • {rec['crowded_class_name']} ({rec['crowded_room']})  →  "
                     f"{rec['target_class_name']} ({rec['target_room']})")
