@@ -151,6 +151,26 @@ def get_class(class_id):
             * **200 OK** – If the class is found, returns a JSON object of class data.
             * **404 Not Found** – If the class is not found, returns a JSON error message.
     """
+    class_data = get_class_details(class_id)
+    if class_data:
+        # serialize and return class data if class is found
+        return jsonify(class_data), 200
+    else:
+        # otherwise provide a 404 error and message along with it 
+        return jsonify({"message": "Class not found"}), 404
+    
+def get_class_details(class_id):
+    """
+    A helper function that returns class details.
+
+    Args:
+        class_id (int):
+            The ID of the class to fetch from the database.
+
+    Returns:
+        dict:
+            A dictionary of class details.
+    """
     conn = sqlite3.connect(DB_FILE)  # Connect to database
     cursor = conn.cursor()
 
@@ -171,11 +191,9 @@ def get_class(class_id):
             "currentEnrollment": row[7],
             "maxEnrollment": row[8]
         }
-        # serialize and return class data if class is found
-        return jsonify(class_data), 200
+        return class_data
     else:
-        # otherwise provide a 404 error and message along with it 
-        return jsonify({"message": "Class not found"}), 404
+        return None
 
 # API Route to receive and handle CSV importing
 @app.route('/upload', methods=['POST'])
@@ -416,7 +434,7 @@ def parse_csv(csv_document):
     # Returns a list of dicts (one dict per class entry)
     return course_data
 
-        
+
 # API Route to update enrollment for a class
 @app.route("/class/<int:class_id>/update-enrollment", methods=["POST"])
 def update_enrollment(class_id):
@@ -452,7 +470,7 @@ def update_enrollment(class_id):
     enrollment, max_enrollment = row
 
     if action == "add":
-        if enrollment < max_enrollment:
+        if (enrollment + 1) <= (max_enrollment + 9):
             enrollment += 1
         else:
             conn.close()
@@ -610,12 +628,13 @@ def export_to_csv():
                         writer.writerow(row)
 
     except Exception:
-        return jsonify("No database exists"), 404
+        return jsonify("No database exists."), 404
     finally:
         conn.close()
-    print("Successfully exported data to file")
-    return jsonify('Successfully exported data to file'), 200
-    
+    print("Successfully exported data to file.")
+    return jsonify('Successfully exported data to file.'), 200
+
+
 # Start the Flask Server
 if __name__ == "__main__":
     app.run(debug=True)

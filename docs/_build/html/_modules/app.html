@@ -77,9 +77,11 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">werkzeug.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">secure_filename</span>
 
 <span class="c1"># Importing utility functions from utils.py</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_instructor</span><span class="p">,</span> <span class="n">get_or_create_professor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_instructor</span><span class="p">,</span> <span class="n">get_or_create_professor</span><span class="p">,</span> <span class="n">fix_csv</span>
 
 <span class="c1"># Little overview of the imports above (uses):</span>
 <span class="c1"># flask → Web framework</span>
@@ -94,8 +96,47 @@
 <span class="c1"># Our SQLite database file</span>
 <span class="n">DB_FILE</span> <span class="o">=</span> <span class="s2">&quot;database.db&quot;</span>
 <span class="c1"># Document Uploads file</span>
-<span class="n">UPLOAD_FOLDER</span> <span class="o">=</span> <span class="s2">&quot;uploads&quot;</span>
-<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">UPLOAD_FOLDER</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># Ensure uploads directory exists</span>
+<span class="n">BASE_DIR</span>       <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span>          <span class="c1"># folder that holds app.py</span>
+<span class="n">UPLOAD_DIR</span>     <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;uploads&quot;</span>
+<span class="n">UPLOAD_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="get_possible_reassignments">
+<a class="viewcode-back" href="../app.html#app.get_possible_reassignments">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/class/&lt;int:class_id&gt;/possible-reassignments&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_possible_reassignments</span><span class="p">(</span><span class="n">class_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieve possible reassignments for a specific class.</span>
+
+<span class="sd">    :param class_id: ID of the class to fetch possible reassignments for.</span>
+<span class="sd">    :type class_id: int</span>
+
+<span class="sd">    :return: JSON response containing the list of possible reassignments.</span>
+<span class="sd">    :rtype: flask.Response</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">row_factory</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">Row</span> <span class="c1"># Enable row factory to access columns by name</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        WITH target_class AS (</span>
+<span class="s2">                    SELECT id, meeting_pattern, enrollment,</span>
+<span class="s2">                    max_enrollment, room, course_number, course_title</span>
+<span class="s2">                    FROM classes</span>
+<span class="s2">                    WHERE id = ?</span>
+<span class="s2">                )</span>
+<span class="s2">                    SELECT b.*</span>
+<span class="s2">                    FROM classes b, target_class t</span>
+<span class="s2">                    WHERE b.id != t.id</span>
+<span class="s2">                    AND b.meeting_pattern = t.meeting_pattern -- same meeting times</span>
+<span class="s2">                    AND t.max_enrollment &gt;= b.enrollment -- target class can accommodate the other class</span>
+<span class="s2">                    AND b.max_enrollment &gt;= t.enrollment -- other class can accommodate the target class</span>
+<span class="s2">                    AND  NOT (b.enrollment = 0 AND b.max_enrollment = 0) -- ignore classes with no enrollment (they&#39;re remote classes)</span>
+<span class="s2">                ORDER BY (b.max_enrollment - b.enrollment) ASC -- sort by available seats</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class_id</span><span class="p">,))</span>
+    <span class="n">partners</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()]</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">partners</span><span class="p">),</span> <span class="mi">200</span></div>
+
 
 <div class="viewcode-block" id="get_classes">
 <a class="viewcode-back" href="../app.html#app.get_classes">[docs]</a>
@@ -136,7 +177,7 @@
 
 <div class="viewcode-block" id="get_professors">
 <a class="viewcode-back" href="../app.html#app.get_professors">[docs]</a>
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/classes/&lt;int:class_id&gt;/professors&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">])</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/class/&lt;int:class_id&gt;/professors&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">])</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_professors</span><span class="p">(</span><span class="n">class_id</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Retrieve the professors associated with a specific class.</span>
@@ -148,8 +189,28 @@
 <span class="sd">    :rtype: flask.Response</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
-    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span></div>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
 
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        SELECT professors.id, professors.first_name, professors.last_name, professors.p_id</span>
+<span class="s2">        FROM professors</span>
+<span class="s2">        JOIN class_professors ON professors.id = class_professors.professor_id</span>
+<span class="s2">        WHERE class_professors.class_id = ?</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class_id</span><span class="p">,))</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">professors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
+        <span class="n">professors</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;first_name&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s2">&quot;last_name&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+            <span class="s2">&quot;p_id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="p">})</span>
+
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">professors</span><span class="p">),</span> <span class="mi">200</span></div>
 
 
 <span class="c1"># API Route to fetch class details by ID </span>
@@ -171,6 +232,29 @@
 <span class="sd">            * **200 OK** – If the class is found, returns a JSON object of class data.</span>
 <span class="sd">            * **404 Not Found** – If the class is not found, returns a JSON error message.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">class_data</span> <span class="o">=</span> <span class="n">get_class_details</span><span class="p">(</span><span class="n">class_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">class_data</span><span class="p">:</span>
+        <span class="c1"># serialize and return class data if class is found</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">class_data</span><span class="p">),</span> <span class="mi">200</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># otherwise provide a 404 error and message along with it </span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Class not found&quot;</span><span class="p">}),</span> <span class="mi">404</span></div>
+
+    
+<div class="viewcode-block" id="get_class_details">
+<a class="viewcode-back" href="../app.html#app.get_class_details">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_class_details</span><span class="p">(</span><span class="n">class_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A helper function that returns class details.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        class_id (int):</span>
+<span class="sd">            The ID of the class to fetch from the database.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        dict:</span>
+<span class="sd">            A dictionary of class details.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>  <span class="c1"># Connect to database</span>
     <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
 
@@ -191,11 +275,9 @@
             <span class="s2">&quot;currentEnrollment&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span>
             <span class="s2">&quot;maxEnrollment&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="mi">8</span><span class="p">]</span>
         <span class="p">}</span>
-        <span class="c1"># serialize and return class data if class is found</span>
-        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">class_data</span><span class="p">),</span> <span class="mi">200</span>
+        <span class="k">return</span> <span class="n">class_data</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="c1"># otherwise provide a 404 error and message along with it </span>
-        <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Class not found&quot;</span><span class="p">}),</span> <span class="mi">404</span></div>
+        <span class="k">return</span> <span class="kc">None</span></div>
 
 
 <span class="c1"># API Route to receive and handle CSV importing</span>
@@ -218,7 +300,7 @@
     
     <span class="n">file</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">files</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">]</span>
     <span class="k">global</span> <span class="n">file_path</span> <span class="c1"># make sure the file path is global so we can access it later</span>
-    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">UPLOAD_FOLDER</span><span class="p">,</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">UPLOAD_DIR</span><span class="p">,</span> <span class="n">file</span><span class="o">.</span><span class="n">filename</span><span class="p">)</span>
     <span class="n">file</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>  <span class="c1"># Save file in uploads folder</span>
 
     <span class="c1"># Parse CSV file</span>
@@ -266,7 +348,6 @@
 <span class="s2">            enrollment INTEGER,</span>
 <span class="s2">            max_enrollment INTEGER,</span>
 <span class="s2">            professor_id INTEGER,</span>
-<span class="s2">            FOREIGN KEY (professor_id) REFERENCES professors(id),</span>
 <span class="s2">            UNIQUE (term, course_number, section)</span>
 <span class="s2">        )</span>
 <span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
@@ -277,7 +358,7 @@
 <span class="s2">                id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
 <span class="s2">                first_name TEXT,</span>
 <span class="s2">                last_name TEXT,</span>
-<span class="s2">                p_id TEXT -- optional unique ID</span>
+<span class="s2">                p_id TEXT</span>
 <span class="s2">            )</span>
 <span class="s2">        &quot;&quot;&quot;</span><span class="p">)</span>
     
@@ -288,6 +369,7 @@
 <span class="s2">            professor_id INTEGER,</span>
 <span class="s2">            FOREIGN KEY (class_id) REFERENCES classes(id),</span>
 <span class="s2">            FOREIGN KEY (professor_id) REFERENCES professors(id)</span>
+<span class="s2">            UNIQUE (class_id, professor_id)</span>
 <span class="s2">        )&quot;&quot;&quot;</span>
     <span class="p">)</span>
 
@@ -348,7 +430,22 @@
             <span class="c1"># There is an ignore statement as since the primary key was changed, it will error if it finds a duplicate, IGNORE will ignore the duplicates</span>
             <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;INSERT OR IGNORE INTO classes (term, course_number, section, course_title, room, meeting_pattern, enrollment, max_enrollment) </span>
 <span class="s2">            VALUES (?, ?, ?, ?, ?, ?, ?, ?)</span>
-<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Term&#39;</span><span class="p">],</span> <span class="n">cross_list_key</span><span class="p">,</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Section #&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Course Title&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Room&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Meeting Pattern&#39;</span><span class="p">],</span> <span class="n">total_enrollment</span><span class="p">,</span> <span class="n">total_max</span><span class="p">))</span>
+<span class="s2">            &quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Term&#39;</span><span class="p">],</span> <span class="n">cross_list_key</span><span class="p">,</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Section #&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Course Title&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Room&#39;</span><span class="p">],</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Meeting Pattern&#39;</span><span class="p">],</span> <span class="n">total_enrollment</span><span class="p">,</span> <span class="n">grouped_class</span><span class="p">[</span><span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">]))</span>
+
+            <span class="c1"># Get the newest class ID</span>
+            <span class="n">class_id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">lastrowid</span>
+
+            <span class="c1"># Parse intstructor from csv and get needed info for adding to database</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">parse_instructor</span><span class="p">(</span><span class="n">grouped_class</span><span class="p">[</span><span class="s1">&#39;Instructor&#39;</span><span class="p">])</span>
+
+            <span class="k">for</span> <span class="n">professor_dict</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                <span class="n">first_name</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span>
+                <span class="n">last_name</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span>
+                <span class="n">professor_id</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;p_id&#39;</span><span class="p">]</span>
+
+                <span class="c1"># Insert the class-professor relationship into the class_professors table and </span>
+                <span class="c1"># add the professor to the database if they don&#39;t exist</span>
+                <span class="n">get_or_create_professor</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">professor_id</span><span class="p">,</span> <span class="n">class_id</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># Insert non crosslisted class into the database</span>
             <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
@@ -365,41 +462,17 @@
             <span class="k">for</span> <span class="n">professor_dict</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
                 <span class="n">first_name</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;first_name&#39;</span><span class="p">]</span>
                 <span class="n">last_name</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;last_name&#39;</span><span class="p">]</span>
-                <span class="n">p_id</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;p_id&#39;</span><span class="p">]</span>
+                <span class="n">professor_id</span> <span class="o">=</span> <span class="n">professor_dict</span><span class="p">[</span><span class="s1">&#39;p_id&#39;</span><span class="p">]</span>
 
-                <span class="c1"># Insert or get the professor_id for a non crosslisted entry</span>
-                <span class="n">professor_id</span> <span class="o">=</span> <span class="n">get_or_create_professor</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">p_id</span><span class="p">)</span>
-
-                <span class="c1"># Insert the class-professor relationship into the class_professors table</span>
-                <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
-<span class="s2">                    INSERT INTO class_professors (class_id, professor_id)</span>
-<span class="s2">                    VALUES (?, ?)&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class_id</span><span class="p">,</span> <span class="n">professor_id</span><span class="p">))</span>
+                <span class="c1"># Insert the class-professor relationship into the class_professors table and </span>
+                <span class="c1"># add the professor to the database if they don&#39;t exist</span>
+                <span class="n">get_or_create_professor</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">first_name</span><span class="p">,</span> <span class="n">last_name</span><span class="p">,</span> <span class="n">professor_id</span><span class="p">,</span> <span class="n">class_id</span><span class="p">)</span>
                 
     <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data should now properly be inserted into the database from the csv file&quot;</span><span class="p">)</span></div>
 
-
-<span class="sd">&#39;&#39;&#39;Function to fix the trailing commas in the csv&#39;&#39;&#39;</span>
-<div class="viewcode-block" id="fix_csv">
-<a class="viewcode-back" href="../app.html#app.fix_csv">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">fix_csv</span><span class="p">(</span><span class="n">csv_document</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;Cannot open the same file for input and output to write, take the extension and and -fix to it to have two separate files&#39;&#39;&#39;</span>
-    <span class="n">fixed_csv</span> <span class="o">=</span> <span class="n">csv_document</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;-fix.csv&quot;</span><span class="p">)</span>
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;Open the csv doc and the output file temporarily created&#39;&#39;&#39;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_document</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">csv_to_clean</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">fixed_csv</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output_csv</span><span class="p">:</span>
-        <span class="n">reader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">reader</span><span class="p">(</span><span class="n">csv_to_clean</span><span class="p">)</span>
-        <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output_csv</span><span class="p">)</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;Loop to check if the last part of the row is empty and delete appropriately&#39;&#39;&#39;</span>
-        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
-            <span class="k">while</span> <span class="n">row</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
-                <span class="n">row</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-            <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-<span class="w">        </span><span class="sd">&#39;&#39;&#39;Return fixed sheet&#39;&#39;&#39;</span>
-    <span class="k">return</span> <span class="n">fixed_csv</span></div>
-
-    
 
 <div class="viewcode-block" id="parse_csv">
 <a class="viewcode-back" href="../app.html#app.parse_csv">[docs]</a>
@@ -417,7 +490,7 @@
     <span class="n">course_data</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">relevant_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Term&quot;</span><span class="p">,</span> <span class="s2">&quot;Course&quot;</span><span class="p">,</span> <span class="s2">&quot;Section #&quot;</span><span class="p">,</span> <span class="s2">&quot;Course Title&quot;</span><span class="p">,</span> <span class="s2">&quot;Room&quot;</span><span class="p">,</span> 
                         <span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">,</span> <span class="s2">&quot;Enrollment&quot;</span><span class="p">,</span> <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">,</span> 
-                        <span class="s2">&quot;Cross-listings&quot;</span><span class="p">,</span> <span class="s2">&quot;Instructor&quot;</span><span class="p">]</span>
+                        <span class="s2">&quot;Cross-listings&quot;</span><span class="p">,</span> <span class="s2">&quot;Instructor&quot;</span><span class="p">,</span> <span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">]</span>
 
     <span class="c1"># Read and process csv file</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csv_document</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">infile</span><span class="p">:</span>
@@ -449,14 +522,16 @@
                     <span class="s2">&quot;Enrollment&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Enrollment&quot;</span><span class="p">]]),</span>  <span class="c1"># Convert to int</span>
                     <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">]]),</span>
                     <span class="s2">&quot;Cross-listings&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Cross-listings&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
-                    <span class="s2">&quot;Instructor&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Instructor&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="s2">&quot;Instructor&quot;</span><span class="p">:</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Instructor&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                    <span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">:</span> <span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">]])</span> <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="n">col_indexes</span><span class="p">[</span><span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">else</span> <span class="mi">0</span>
+
                 <span class="p">})</span>
     
     <span class="c1"># Returns a list of dicts (one dict per class entry)</span>
     <span class="k">return</span> <span class="n">course_data</span></div>
 
 
-        
+
 <span class="c1"># API Route to update enrollment for a class</span>
 <div class="viewcode-block" id="update_enrollment">
 <a class="viewcode-back" href="../app.html#app.update_enrollment">[docs]</a>
@@ -494,7 +569,7 @@
     <span class="n">enrollment</span><span class="p">,</span> <span class="n">max_enrollment</span> <span class="o">=</span> <span class="n">row</span>
 
     <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="s2">&quot;add&quot;</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">enrollment</span> <span class="o">&lt;</span> <span class="n">max_enrollment</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">enrollment</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">max_enrollment</span> <span class="o">+</span> <span class="mi">9</span><span class="p">):</span>
             <span class="n">enrollment</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -505,12 +580,65 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Class is empty&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">enrollment</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>  <span class="c1"># Set enrollment to a specific number</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Invalid action&quot;</span><span class="p">}),</span> <span class="mi">400</span>
         
     <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;UPDATE classes SET enrollment = ? WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">enrollment</span><span class="p">,</span> <span class="n">class_id</span><span class="p">))</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
     <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
     <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;enrollment&quot;</span><span class="p">:</span> <span class="n">enrollment</span><span class="p">}),</span> <span class="mi">200</span></div>
+
+
+
+<span class="c1"># API Route to swap (relevant) class data</span>
+<div class="viewcode-block" id="swap_classes">
+<a class="viewcode-back" href="../app.html#app.swap_classes">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/class/&lt;int:class_id&gt;/swap/&lt;int:swap_id&gt;&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">swap_classes</span><span class="p">(</span><span class="n">class_id</span><span class="p">,</span> <span class="n">swap_id</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Swaps two classes&#39; data.</span>
+<span class="sd">    </span>
+<span class="sd">    Both classes have to reside in the database.</span>
+
+<span class="sd">    :return: JSON response indicating success or an error message.</span>
+<span class="sd">    :rtype: flask.Response</span>
+
+<span class="sd">    :status 200: Successfully swapped classes</span>
+<span class="sd">    :status 400: Failed to swap classes</span>
+<span class="sd">    :status 404: One of the classes was not found</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get current class details</span>
+    <span class="n">c1</span> <span class="o">=</span> <span class="n">get_class_details</span><span class="p">(</span><span class="n">class_id</span><span class="p">)</span>
+    <span class="n">c2</span> <span class="o">=</span> <span class="n">get_class_details</span><span class="p">(</span><span class="n">swap_id</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">c1</span> <span class="ow">and</span> <span class="n">c2</span><span class="p">:</span>
+        <span class="c1"># Only the max enrollment and room location need to be swapped</span>
+        <span class="n">temp</span> <span class="o">=</span> <span class="p">[</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]]</span>
+        <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">]</span>
+        <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span>
+        <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Successfully swapped classes.&#39;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Failed to insert changes into the database.&#39;</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># realistically this shouldn&#39;t hit</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Could not find one of the classes.&#39;</span><span class="p">,</span> <span class="mi">404</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="export_to_csv">
@@ -589,13 +717,14 @@
                         <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
 
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s2">&quot;No database exists&quot;</span><span class="p">),</span> <span class="mi">404</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s2">&quot;No database exists.&quot;</span><span class="p">),</span> <span class="mi">404</span>
     <span class="k">finally</span><span class="p">:</span>
         <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successfully exported data to file&quot;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Successfully exported data to file&#39;</span><span class="p">),</span> <span class="mi">200</span></div>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Successfully exported data to file.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Successfully exported data to file.&#39;</span><span class="p">),</span> <span class="mi">200</span></div>
 
-    
+
+
 <span class="c1"># Start the Flask Server</span>
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>

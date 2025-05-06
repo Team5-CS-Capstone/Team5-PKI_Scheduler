@@ -32,9 +32,14 @@ def recommend_swaps_per_timeslot(db_path):
         })
 
     recommendations = {}
+    couldnt_find_swap = []
 
     for slot, classes in slots.items():
         overfull = [c for c in classes if c["enrollment"] > c["capacity"]]
+
+        # if no classes in this specific timeslot are full capacity
+        # then we don't need to do anything 
+        # and can skip to the next timeslot
         if not overfull:
             continue                               
 
@@ -66,13 +71,27 @@ def recommend_swaps_per_timeslot(db_path):
                 slot_recs.append({
                     "crowded_id":     crowded["id"],
                     "crowded_room":   crowded["room"],
+                    "crowded_class_name": crowded["course_num"],
                     "target_id":      target["id"],
                     "target_room":    target["room"],
+                    "target_class_name": target["course_num"],
                     "reason": (f"{crowded['enrollment']} students need "
                             f"{target['capacity']}-seat room")
                 })
                 used_target.add(target["id"])
                 spare_sorted.remove(target)
+            else:
+                # add the crowded class that failed to find a swap
+                # to the find swap list so we can try to find a swap
+                # in another timeslot
+                couldnt_find_swap.append({
+                    "id": crowded["id"],
+                    "course_num": crowded["course_num"],
+                    "room": crowded["room"],
+                    "enrollment": crowded["enrollment"],
+                    "capacity": crowded["capacity"],
+                    "slot": slot
+                })
 
         if slot_recs:
             recommendations[slot] = slot_recs
@@ -189,11 +208,39 @@ if __name__ == "__main__":
     import os
 
     DB_FILE = "database.db"
-    recommendations = recommend_swaps_per_timeslot(DB_FILE)
 
-    for slot, recs in recommendations.items():
-        print(f"Recommendations for {slot}:")
-        for rec in recs:
-            print(f"  Swap {rec['crowded_room']} with {rec['target_room']}")
-        print()
-    print("No recommendations found.")
+    # Find same slot swaps first to avoid unnecessary cross-slot swaps
+    same, not_swappable = recommend_swaps_per_timeslot(DB_FILE)
+
+    if same:
+        print("\n=== SAME-SLOT RECOMMENDATIONS ===")
+        for slot in sorted(same):                          # keep order tidy
+            print(f"{slot}:")
+            for rec in same[slot]:
+                print(f"  • {rec['crowded_class_name']} ({rec['crowded_room']})  →  "
+                    f"{rec['target_class_name']} ({rec['target_room']})")
+    else:
+        print("\nNo same-slot swaps found.")
+
+    # Secondly try to find cross-slot swaps for classes that couldn't be moved
+    # in the same slot
+    if not_swappable:
+        print("\n=== STILL OVER CAPACITY ===")
+        for c in not_swappable:
+            print(f"  • {c['course_num']} in {c['room']} "
+                f"({c['enrollment']}/{c['capacity']}) at {c['slot']}")
+    else:
+        print("\nNo classes left over capacity.")
+
+    cross = recommended_swaps_if_no_swaps_in_same_timeslot(DB_FILE, not_swappable)
+
+    if cross:
+        print("\n=== CROSS-SLOT RECOMMENDATIONS ===")
+        for slot in sorted(cross):
+            print(f"{slot}:")
+            for rec in cross[slot]:
+                print(f"  • {rec['crowded_class_name']} ({rec['crowded_room']})  →  "
+                    f"{rec['target_class_name']} ({rec['target_room']})")
+    else:
+        print("\nNo cross-slot swaps needed.")
+

@@ -8,4 +8,4 @@ python-db
    import_csv_to_table
    utils
    test_app
-   
+   algorithm
