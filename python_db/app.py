@@ -10,6 +10,8 @@ from werkzeug.utils import secure_filename
 
 # Importing utility functions from utils.py
 from utils import parse_instructor, get_or_create_professor, fix_csv
+from algorithm import recommend_swaps_per_timeslot, recommended_swaps_if_no_swaps_in_same_timeslot
+# Importing the algorithm to get swap recommendations
 
 # Little overview of the imports above (uses):
 # flask → Web framework
@@ -492,6 +494,22 @@ def update_enrollment(class_id):
 
     return jsonify({"enrollment": enrollment}), 200
 
+@app.route("/swap-recommendations", methods=["GET"])
+def get_swap_recommendations():
+    """
+    Run the algorithm to get swap recommendations for classes
+    and show them to the user (class coordinators).
+    """
+    same_slot_swaps, not_swappable = recommend_swaps_per_timeslot(DB_FILE)
+    cross_slot_recommendations = recommended_swaps_if_no_swaps_in_same_timeslot(DB_FILE, not_swappable)
+
+    # Combine the recommendations into a single response
+    return jsonify(
+        {
+            "same_slot_swaps": same_slot_swaps,
+            "cross_slot_recommendations": cross_slot_recommendations,
+        }
+    ), 200
 
 # API Route to swap (relevant) class data
 @app.route("/class/<int:class_id>/swap/<int:swap_id>", methods=["POST"])
