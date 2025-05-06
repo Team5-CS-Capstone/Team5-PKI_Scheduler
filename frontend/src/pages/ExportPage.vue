@@ -38,7 +38,7 @@ export default {
          */
         async exportToFile() {
             try {
-                const response = await axios.get('http://127.0.0.1:5000/export');
+                const response = await axios.put(`http://127.0.0.1:5000/export`);
                 // Process response as needed.
             } catch (error) {
                 console.error('Could not export data.', error);
