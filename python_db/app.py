@@ -225,10 +225,6 @@ def upload_file():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
     
-    # Delete the temp fixed csv file and the original csv file from uploads folder
-    os.remove(file_path)
-    os.remove(file_path.replace("-fix", ""))
-    
     return jsonify({"message": "File uploaded successfully!", "file_path": file_path}), 200
 
 def create_tables():
@@ -554,7 +550,7 @@ def swap_classes(class_id, swap_id):
         return jsonify('Could not find one of the classes.', 404)
 
 
-@app.route("/export")
+@app.route("/export", methods=["PUT"])
 def export_to_csv():
     """
     Export classes from the database into a CSV file named ``output.csv``.
@@ -607,26 +603,29 @@ def export_to_csv():
                 writer.writerow(data) # write headers 
 
             # start writing in all the new data
-            id = 1 # this is assuming we don't delete or rearrange class IDs
+            cursor.execute("SELECT * FROM classes")
             for row in reader:
                 if len(row) > 1: # process new data
                     with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
                         writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
+                        
+                        # instead of searching via an incrementing id, write each row of the database one by one
+                        db_row = cursor.fetchone()
+                        # stop when the end of the database is reached
+                        if db_row is None:
+                            break
 
                         # data is whatever's in the input csv file
                         data = row
-                        cursor.execute("SELECT enrollment FROM classes WHERE id = ?", (id,))
-                        new_enrollment_count = cursor.fetchall()[0][0]
+                        new_enrollment_count = db_row[7]
                         data[0] = None # so it doesn't get quoted in the csv file
                         data[28] = new_enrollment_count # 28 is the index of the current enrollment count. if there's a more dynamic way to do this in case the data format changes, let's do that instead
 
                         writer.writerow(data)
-                        id += 1
                 else: # copy row
                     with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
                         writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
                         writer.writerow(row)
-
     except Exception:
         return jsonify("No database exists."), 404
     finally:
