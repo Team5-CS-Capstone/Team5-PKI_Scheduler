@@ -97,7 +97,14 @@
                 </span>
             </div>
         </div>
+        <router-link
+            to="/classes"
+            class="ml-6 mt-4 inline-block text-red-800 hover:text-red-1000 font-bold text-lg underline"
+            >
+            ← Back
+        </router-link>
     </div>
+
 
 </template>
 

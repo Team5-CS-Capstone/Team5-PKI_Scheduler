@@ -5,7 +5,7 @@
             <span class="font-semibold text-xl">PKI Class Search</span>
             <!-- Button that allows classes to be filtered-->
             <button
-                class="px-4 py-2 bg-blue-400 text-black font-semibold rounded hover:bg-blue-600"
+                class="px-4 py-2 bg-blue-200 text-black font-semibold rounded hover:bg-blue-600"
                 @click="toggleFilter"
                 >
                 {{ showOverCapacityFirst ? "Show Default Order" : "Show Over-Capacity First" }}
