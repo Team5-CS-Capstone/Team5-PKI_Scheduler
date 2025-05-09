@@ -83,7 +83,7 @@ Example of an endpoint that takes in a parameter for class ID below:
 | `/export`     | `PUT`      | Exports classes from the database into a CSV |
 | `/class/<id>/professors`     | `GET`      | Retrieves the profs associated with a specific class |
 | `/class/<id>/possible-reassignments`     | `GET`      | Retrieves the possible class swaps for a specific class |
-| `/class/<id>/swap/<swap_id>`     | `PUT`     | Swaps room and max enrollment between the classes with ids <id> and <class_id>|
+| `/swap_classes`     | `PUT`     | Swaps classes (enrollment, max enroll, and possibly time)|
 
 
 ## SQLite Database Installation/Recommendations 
