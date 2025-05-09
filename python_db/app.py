@@ -27,8 +27,13 @@ CORS(app, supports_credentials=True)
 DB_FILE = "database.db"
 # Document Uploads file
 BASE_DIR       = Path(__file__).resolve().parent          # folder that holds app.py
+AUDIT_DIR      = BASE_DIR / "audit_logs"
 UPLOAD_DIR     = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+AUDIT_DIR.mkdir(exist_ok=True)
+
+# Audit log file for swapped classes
+swap_file  = os.path.join(AUDIT_DIR, "section_swaps.txt")
 
 @app.route("/class/<int:class_id>/possible-reassignments", methods=["GET"])
 def get_possible_reassignments(class_id):
@@ -540,6 +545,17 @@ def swap_classes(class_id, swap_id):
             cursor.execute('UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?', (c1["maxEnrollment"], c1["room"], c1["id"]))
             cursor.execute('UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?', (c2["maxEnrollment"], c2["room"], c2["id"]))
             conn.commit()
+
+            log_swap = (
+                f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S} - "\
+                f"SAME-TIME SLOT SWAP: {c1["time"]}\n"
+                f"{c1["courseName"]} ({c2["room"]}) -> "
+                f"{c2["courseName"]} ({c1["room"]})\n"
+                )
+                
+            with open(swap_file, "a") as logfile:
+                logfile.write(log_swap)
+            
             return jsonify('Successfully swapped classes.', 200)
         except Exception:
             return jsonify('Failed to insert changes into the database.', 400)
