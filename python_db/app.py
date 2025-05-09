@@ -536,7 +536,7 @@ def swap_classes(class_id, swap_id):
                 f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S} - "\
                 f"SAME-TIME SLOT SWAP: {c1["time"]}\n"
                 f"{c1["courseName"]} ({c2["room"]}) -> "
-                f"{c2["courseName"]} {swap_id} ({c1["room"]})\n"
+                f"{c2["courseName"]} ({c1["room"]})\n"
                 )
                 
             with open(swap_file, "a") as logfile:
