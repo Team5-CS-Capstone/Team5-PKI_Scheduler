@@ -226,7 +226,11 @@ export default {
         async selectReassignment(swap_id) {
             try {
                 // Swap class information
-                await axios.post(`http://127.0.0.1:5000/class/${this.$route.params.id}/swap/${swap_id.id}`);
+                var currentClassId = this.$route.params.id;
+                await axios.post(`http://127.0.0.1:5000/swap-classrooms`, {
+                    crowded_id: currentClassId,
+                    target_id: swap_id.id,
+                });
                 console.log('Swapped classes', this.$route.params.id, ' and ', swap_id.id, ' successfully');
                 alert('Successfully swapped classes!');
 

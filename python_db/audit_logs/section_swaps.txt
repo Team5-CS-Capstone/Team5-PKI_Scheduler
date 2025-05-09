@@ -1,0 +1,11 @@
+2025-05-08 23:40:51 - SAME-TIME SLOT SWAP: MW 10:30am-11:45am
+AREN 1030 (Peter Kiewit Institute 248) -> CIVE 463-001 / CIVE 463-820 / CIVE 863-001 / CIVE 863-820 (Peter Kiewit Institute 160)
+
+2025-05-08 23:40:57 - SAME-TIME SLOT SWAP: MW 3pm-4:15pm
+CIVE 102 (Peter Kiewit Institute 263) -> AREN 1030 (Peter Kiewit Institute 108)
+
+2025-05-08 23:43:20 - SAME-TIME SLOT SWAP: MW 10:30am-11:45am
+AREN 3030 (Peter Kiewit Institute 117) -> AREN 3100 (Peter Kiewit Institute 274)
+
+2025-05-08 23:43:58 - DIFFERENT-TIME SLOT SWAP: MW 12pm-1:15pm -> MW 12pm-1:15pm
+CIVE 441 (Peter Kiewit Institute 263) -> ENGR 200 (Peter Kiewit Institute 256)
