@@ -39,6 +39,7 @@ export default {
         async exportToFile() {
             try {
                 const response = await axios.put(`http://127.0.0.1:5000/export`);
+                alert('Successfully exported data to CSV! Please locate the file on your Desktop.');
                 // Process response as needed.
             } catch (error) {
                 console.error('Could not export data.', error);
