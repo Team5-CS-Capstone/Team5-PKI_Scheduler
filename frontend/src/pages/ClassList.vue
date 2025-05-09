@@ -3,17 +3,18 @@
         <!-- Header with title that contains a search bar -->
         <div class="flex items-center justify-between bg-red-700 py-3 h-20 px-8 top-0 fixed w-screen">
             <span class="font-semibold text-xl">PKI Class Search</span>
+            <!-- Button that allows classes to be filtered-->
+            <button
+                class="px-4 py-2 bg-blue-200 text-black font-semibold rounded hover:bg-blue-600"
+                @click="toggleFilter"
+                >
+                {{ showOverCapacityFirst ? "Show Default Order" : "Show Over-Capacity First" }}
+            </button>
             <input type="text" placeholder="Search by course name or title..."
                 class="mr-32 px-3 py-2 rounded-lg border border-gray-300 w-96 text-white" v-model="search"
                 @keyup.enter="searchCourses" />
         </div>
-        <!-- Button that allows classes to be filtered-->
-        <button
-            class="mt-24 ml-8 px-4 py-2 bg-blue-400 text-black font-semibold rounded hover:bg-blue-600"
-            @click="toggleFilter"
-            >
-            {{ showOverCapacityFirst ? "Show Default Order" : "Show Over-Capacity First" }}
-        </button>
+        
 
         <!-- Grid for clickable classes -->
         <div v-if="filteredCourses && filteredCourses.length > 0" class="flex grid sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-4 mt-24 m-8">
