@@ -249,4 +249,3 @@ if __name__ == "__main__":
                     f"{rec['target_class_name']} ({rec['target_room']})")
     else:
         print("\nNo cross-slot swaps needed.")
-

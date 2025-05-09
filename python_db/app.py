@@ -28,8 +28,13 @@ DB_FILE = "database.db"
 # Document Uploads file
 BASE_DIR       = Path(__file__).resolve().parent          # folder that holds app.py
 AUDIT_DIR      = BASE_DIR / "audit_logs"
+AUDIT_DIR      = BASE_DIR / "audit_logs"
 UPLOAD_DIR     = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+AUDIT_DIR.mkdir(exist_ok=True)
+
+# Audit log file for swapped classes
+swap_file  = os.path.join(AUDIT_DIR, "section_swaps.txt")
 AUDIT_DIR.mkdir(exist_ok=True)
 
 # Audit log file for swapped classes
