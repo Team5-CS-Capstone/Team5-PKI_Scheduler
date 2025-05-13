@@ -82,6 +82,8 @@
 
 <span class="c1"># Importing utility functions from utils.py</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">parse_instructor</span><span class="p">,</span> <span class="n">get_or_create_professor</span><span class="p">,</span> <span class="n">fix_csv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">algorithm</span><span class="w"> </span><span class="kn">import</span> <span class="n">recommend_swaps_per_timeslot</span><span class="p">,</span> <span class="n">recommended_swaps_if_no_swaps_in_same_timeslot</span>
+<span class="c1"># Importing the algorithm to get swap recommendations</span>
 
 <span class="c1"># Little overview of the imports above (uses):</span>
 <span class="c1"># flask → Web framework</span>
@@ -97,8 +99,18 @@
 <span class="n">DB_FILE</span> <span class="o">=</span> <span class="s2">&quot;database.db&quot;</span>
 <span class="c1"># Document Uploads file</span>
 <span class="n">BASE_DIR</span>       <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span>          <span class="c1"># folder that holds app.py</span>
+<span class="n">AUDIT_DIR</span>      <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;audit_logs&quot;</span>
+<span class="n">AUDIT_DIR</span>      <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;audit_logs&quot;</span>
 <span class="n">UPLOAD_DIR</span>     <span class="o">=</span> <span class="n">BASE_DIR</span> <span class="o">/</span> <span class="s2">&quot;uploads&quot;</span>
 <span class="n">UPLOAD_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">AUDIT_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Audit log file for swapped classes</span>
+<span class="n">swap_file</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">AUDIT_DIR</span><span class="p">,</span> <span class="s2">&quot;section_swaps.txt&quot;</span><span class="p">)</span>
+<span class="n">AUDIT_DIR</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="c1"># Audit log file for swapped classes</span>
+<span class="n">swap_file</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">AUDIT_DIR</span><span class="p">,</span> <span class="s2">&quot;section_swaps.txt&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="get_possible_reassignments">
 <a class="viewcode-back" href="../app.html#app.get_possible_reassignments">[docs]</a>
@@ -311,10 +323,6 @@
         <span class="n">insert_csv_into_table</span><span class="p">(</span><span class="n">course_data</span><span class="p">)</span> <span class="c1"># Insert the parsed data into the database</span>
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">400</span>
-    
-    <span class="c1"># Delete the temp fixed csv file and the original csv file from uploads folder</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">file_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-fix&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
     
     <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;File uploaded successfully!&quot;</span><span class="p">,</span> <span class="s2">&quot;file_path&quot;</span><span class="p">:</span> <span class="n">file_path</span><span class="p">}),</span> <span class="mi">200</span></div>
 
@@ -594,12 +602,31 @@
     <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;enrollment&quot;</span><span class="p">:</span> <span class="n">enrollment</span><span class="p">}),</span> <span class="mi">200</span></div>
 
 
+<div class="viewcode-block" id="get_swap_recommendations">
+<a class="viewcode-back" href="../app.html#app.get_swap_recommendations">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/swap-recommendations&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_swap_recommendations</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Run the algorithm to get swap recommendations for classes</span>
+<span class="sd">    and show them to the user (class coordinators).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">same_slot_swaps</span><span class="p">,</span> <span class="n">not_swappable</span> <span class="o">=</span> <span class="n">recommend_swaps_per_timeslot</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+    <span class="n">cross_slot_recommendations</span> <span class="o">=</span> <span class="n">recommended_swaps_if_no_swaps_in_same_timeslot</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">,</span> <span class="n">not_swappable</span><span class="p">)</span>
+
+    <span class="c1"># Combine the recommendations into a single response</span>
+    <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;same_slot_swaps&quot;</span><span class="p">:</span> <span class="n">same_slot_swaps</span><span class="p">,</span>
+            <span class="s2">&quot;cross_slot_recommendations&quot;</span><span class="p">:</span> <span class="n">cross_slot_recommendations</span><span class="p">,</span>
+        <span class="p">}</span>
+    <span class="p">),</span> <span class="mi">200</span></div>
+
 
 <span class="c1"># API Route to swap (relevant) class data</span>
 <div class="viewcode-block" id="swap_classes">
 <a class="viewcode-back" href="../app.html#app.swap_classes">[docs]</a>
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/class/&lt;int:class_id&gt;/swap/&lt;int:swap_id&gt;&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">swap_classes</span><span class="p">(</span><span class="n">class_id</span><span class="p">,</span> <span class="n">swap_id</span><span class="p">):</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/swap-classrooms&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">swap_classes</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Swaps two classes&#39; data.</span>
 <span class="sd">    </span>
@@ -612,6 +639,11 @@
 <span class="sd">    :status 400: Failed to swap classes</span>
 <span class="sd">    :status 404: One of the classes was not found</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="n">class_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;crowded_id&quot;</span><span class="p">)</span>
+    <span class="n">swap_id</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;target_id&quot;</span><span class="p">)</span>
+    <span class="n">different_timeslot</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;different_timeslot&quot;</span><span class="p">))</span>
+
     <span class="c1"># Get current class details</span>
     <span class="n">c1</span> <span class="o">=</span> <span class="n">get_class_details</span><span class="p">(</span><span class="n">class_id</span><span class="p">)</span>
     <span class="n">c2</span> <span class="o">=</span> <span class="n">get_class_details</span><span class="p">(</span><span class="n">swap_id</span><span class="p">)</span>
@@ -624,12 +656,36 @@
         <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
 
+        <span class="c1"># Update the timeslot if the timeslot is different using a ternary operation</span>
+        <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">different_timeslot</span> <span class="k">else</span> <span class="p">(</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">])</span>
+
         <span class="k">try</span><span class="p">:</span>
             <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
             <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
-            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
-            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ? WHERE id = ?&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ?, meeting_pattern = ? WHERE id = ?&#39;</span><span class="p">,</span> 
+                <span class="p">(</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">c1</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;UPDATE classes SET max_enrollment = ?, room = ?, meeting_pattern = ? WHERE id = ?&#39;</span><span class="p">,</span> 
+                <span class="p">(</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;maxEnrollment&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="n">c2</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]))</span>
             <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">different_timeslot</span><span class="p">:</span>
+                <span class="n">log_swap</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M:%S</span><span class="si">}</span><span class="s2"> - &quot;</span>\
+                    <span class="sa">f</span><span class="s2">&quot;SAME-TIME SLOT SWAP: </span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;courseName&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2">) -&gt; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;courseName&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>  
+                <span class="n">log_swap</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="si">:</span><span class="s2">%Y-%m-%d %H:%M:%S</span><span class="si">}</span><span class="s2"> - &quot;</span>\
+                    <span class="sa">f</span><span class="s2">&quot;DIFFERENT-TIME SLOT SWAP: </span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;courseName&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2">) -&gt; &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c2</span><span class="p">[</span><span class="s2">&quot;courseName&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">c1</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span><span class="si">}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">swap_file</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">logfile</span><span class="p">:</span>
+                <span class="n">logfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">log_swap</span><span class="p">)</span>
+
             <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Successfully swapped classes.&#39;</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s1">&#39;Failed to insert changes into the database.&#39;</span><span class="p">,</span> <span class="mi">400</span><span class="p">)</span>
@@ -643,7 +699,7 @@
 
 <div class="viewcode-block" id="export_to_csv">
 <a class="viewcode-back" href="../app.html#app.export_to_csv">[docs]</a>
-<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/export&quot;</span><span class="p">)</span>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/export&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;PUT&quot;</span><span class="p">])</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">export_to_csv</span><span class="p">():</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Export classes from the database into a CSV file named ``output.csv``.</span>
@@ -660,6 +716,8 @@
 <span class="sd">    :status 404: No database or error accessing records.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DB_FILE</span><span class="p">)</span>
+    <span class="n">desktop_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;USERPROFILE&#39;</span><span class="p">]),</span> <span class="s1">&#39;Desktop&#39;</span><span class="p">)</span>
+    <span class="n">output_destination</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">desktop_path</span><span class="p">,</span> <span class="s2">&quot;output.csv&quot;</span><span class="p">)</span>
     <span class="c1"># check to make sure the connection worked</span>
     <span class="c1"># likely will remove this later. I&#39;m thinking we disable the button if theres no database/problems if possible</span>
     <span class="k">try</span><span class="p">:</span>
@@ -674,12 +732,12 @@
             <span class="c1"># start overwriting the csv file. start with writing the date</span>
             <span class="n">data</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
             <span class="n">season</span><span class="p">,</span> <span class="n">year</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;output.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_destination</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
                 <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NOTNULL</span><span class="p">)</span>
                 <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">season</span><span class="si">}</span><span class="s1"> </span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">])</span>
 
             <span class="c1"># append date, then column headers</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;output.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_destination</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
                 <span class="nb">next</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span> <span class="c1"># skip date in the input</span>
                 <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NOTNULL</span><span class="p">)</span>
 
@@ -696,26 +754,29 @@
                 <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="c1"># write headers </span>
 
             <span class="c1"># start writing in all the new data</span>
-            <span class="nb">id</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># this is assuming we don&#39;t delete or rearrange class IDs</span>
+            <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM classes&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reader</span><span class="p">:</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="c1"># process new data</span>
-                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;output.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_destination</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
                         <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NOTNULL</span><span class="p">)</span>
+                        
+                        <span class="c1"># instead of searching via an incrementing id, write each row of the database one by one</span>
+                        <span class="n">db_row</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+                        <span class="c1"># stop when the end of the database is reached</span>
+                        <span class="k">if</span> <span class="n">db_row</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="k">break</span>
 
                         <span class="c1"># data is whatever&#39;s in the input csv file</span>
                         <span class="n">data</span> <span class="o">=</span> <span class="n">row</span>
-                        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT enrollment FROM classes WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">id</span><span class="p">,))</span>
-                        <span class="n">new_enrollment_count</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">new_enrollment_count</span> <span class="o">=</span> <span class="n">db_row</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span>
                         <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span> <span class="c1"># so it doesn&#39;t get quoted in the csv file</span>
                         <span class="n">data</span><span class="p">[</span><span class="mi">28</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_enrollment_count</span> <span class="c1"># 28 is the index of the current enrollment count. if there&#39;s a more dynamic way to do this in case the data format changes, let&#39;s do that instead</span>
 
                         <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-                        <span class="nb">id</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">else</span><span class="p">:</span> <span class="c1"># copy row</span>
-                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;output.csv&quot;</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">output_destination</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
                         <span class="n">writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_NOTNULL</span><span class="p">)</span>
                         <span class="n">writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
-
     <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="s2">&quot;No database exists.&quot;</span><span class="p">),</span> <span class="mi">404</span>
     <span class="k">finally</span><span class="p">:</span>

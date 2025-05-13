@@ -71,7 +71,7 @@
              
   <h1>Source code for algorithm</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">app</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_professors</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
 
 <div class="viewcode-block" id="recommend_swaps_per_timeslot">
 <a class="viewcode-back" href="../algorithm.html#algorithm.recommend_swaps_per_timeslot">[docs]</a>
@@ -136,6 +136,7 @@
                     <span class="n">r</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">spare_sorted</span>
                     <span class="k">if</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span>      
                     <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">]</span>
+                    <span class="ow">and</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;capacity&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;enrollment&quot;</span><span class="p">]</span>
                     <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">used_target</span>
                 <span class="p">),</span>
                 <span class="kc">None</span>
@@ -197,10 +198,12 @@
     <span class="c1"># create dicts to hold class data</span>
     <span class="c1"># and professor schedules</span>
     <span class="c1"># and a list of classes in each slot</span>
-    <span class="n">classes</span>      <span class="o">=</span> <span class="p">{}</span>                         
-    <span class="n">class_prof</span>   <span class="o">=</span> <span class="p">{}</span>                        
-    <span class="n">prof_busy</span>    <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>           
-    <span class="n">slots</span>        <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>          
+    <span class="n">classes</span> <span class="o">=</span> <span class="p">{}</span>                         
+    <span class="n">class_prof</span> <span class="o">=</span> <span class="p">{}</span>                        
+    <span class="n">prof_busy</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>           
+    <span class="n">slots</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>    
+    <span class="n">swapped</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="c1"># classes already swapped   </span>
+    <span class="n">taken_target</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span> <span class="c1"># classes already in a target slot  </span>
     
     <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">rows</span><span class="p">:</span>
         <span class="n">c</span> <span class="o">=</span> <span class="p">{</span>
@@ -222,6 +225,9 @@
     <span class="n">recommendations</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">crowded</span> <span class="ow">in</span> <span class="n">not_swappable</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">swapped</span><span class="p">:</span>          <span class="c1"># already handled in a swap</span>
+            <span class="k">continue</span>
+
         <span class="n">c</span> <span class="o">=</span> <span class="n">classes</span><span class="p">[</span><span class="n">crowded</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span>
         <span class="n">c_prof</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]</span>
 
@@ -234,26 +240,48 @@
             <span class="c1"># candidate class / room large enough?</span>
             <span class="n">target</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">candidates</span>
                         <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;cap&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;enroll&quot;</span><span class="p">]</span>
+                        <span class="ow">and</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">swapped</span>
+                        <span class="ow">and</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">taken_target</span>
+                        <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;cap&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;enroll&quot;</span><span class="p">]</span>
                         <span class="ow">and</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">]</span>
                         <span class="ow">and</span> <span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">])</span>
                         <span class="ow">and</span> <span class="p">(</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prof_busy</span><span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]])</span>
                         <span class="p">),</span> <span class="kc">None</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">target</span><span class="p">:</span>
-                <span class="n">recommendations</span><span class="p">[</span><span class="n">slot</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
-                    <span class="s2">&quot;old_slot&quot;</span><span class="p">:</span>       <span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;new_slot&quot;</span><span class="p">:</span>       <span class="n">slot</span><span class="p">,</span>
+                <span class="c1"># 1. capture originals</span>
+                <span class="n">orig_slot</span><span class="p">,</span> <span class="n">orig_room</span><span class="p">,</span> <span class="n">orig_cap</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;cap&quot;</span><span class="p">]</span>
+                <span class="n">tgt_slot</span><span class="p">,</span> <span class="n">tgt_room</span><span class="p">,</span> <span class="n">tgt_cap</span> <span class="o">=</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;slot&quot;</span><span class="p">],</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;cap&quot;</span><span class="p">]</span>
+
+                <span class="c1"># 2. swap in your classes dict</span>
+                <span class="n">c</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">slot</span><span class="o">=</span><span class="n">tgt_slot</span><span class="p">,</span> <span class="n">room</span><span class="o">=</span><span class="n">tgt_room</span><span class="p">,</span> <span class="n">cap</span><span class="o">=</span><span class="n">tgt_cap</span><span class="p">)</span>
+                <span class="n">target</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">slot</span><span class="o">=</span><span class="n">orig_slot</span><span class="p">,</span> <span class="n">room</span><span class="o">=</span><span class="n">orig_room</span><span class="p">,</span> <span class="n">cap</span><span class="o">=</span><span class="n">orig_cap</span><span class="p">)</span>
+
+                <span class="c1"># 3. build the recommendation **before** altering the slots dict,</span>
+                <span class="c1"># and use the saved variables so nothing is lost</span>
+                <span class="n">recommendations</span><span class="p">[</span><span class="n">orig_slot</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                    <span class="s2">&quot;old_slot&quot;</span><span class="p">:</span>       <span class="n">orig_slot</span><span class="p">,</span>          <span class="c1"># where the crowded class started</span>
+                    <span class="s2">&quot;new_slot&quot;</span><span class="p">:</span>       <span class="n">tgt_slot</span><span class="p">,</span>           <span class="c1"># where it will move</span>
                     <span class="s2">&quot;crowded_id&quot;</span><span class="p">:</span>     <span class="n">c</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;crowded_room&quot;</span><span class="p">:</span>   <span class="n">c</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;crowded_room&quot;</span><span class="p">:</span>   <span class="n">orig_room</span><span class="p">,</span>
                     <span class="s2">&quot;crowded_class_name&quot;</span><span class="p">:</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;target_class_name&quot;</span><span class="p">:</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;target_class_name&quot;</span><span class="p">:</span>  <span class="n">target</span><span class="p">[</span><span class="s2">&quot;course_num&quot;</span><span class="p">],</span>
                     <span class="s2">&quot;target_id&quot;</span><span class="p">:</span>      <span class="n">target</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;target_room&quot;</span><span class="p">:</span>    <span class="n">target</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span>
-                    <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;enroll&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> students need </span><span class="si">{</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;cap&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">-seat &quot;</span>
-                    <span class="sa">f</span><span class="s2">&quot;room; professor </span><span class="si">{</span><span class="n">c_prof</span><span class="si">}</span><span class="s2"> free at </span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="s2">&quot;target_room&quot;</span><span class="p">:</span>    <span class="n">tgt_room</span><span class="p">,</span>
+                    <span class="s2">&quot;reason&quot;</span><span class="p">:</span> <span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">c</span><span class="p">[</span><span class="s1">&#39;enroll&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> students need </span><span class="si">{</span><span class="n">tgt_cap</span><span class="si">}</span><span class="s2">-seat room; &quot;</span>
+                            <span class="sa">f</span><span class="s2">&quot;professor </span><span class="si">{</span><span class="n">c_prof</span><span class="si">}</span><span class="s2"> free at </span><span class="si">{</span><span class="n">tgt_slot</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
                 <span class="p">})</span>
+                <span class="c1"># 4. update slots mapping</span>
+                <span class="n">slots</span><span class="p">[</span><span class="n">orig_slot</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>         <span class="c1"># remove c from its old slot list</span>
+                <span class="n">slots</span><span class="p">[</span><span class="n">tgt_slot</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>          <span class="c1"># add c to new slot list</span>
+
+                <span class="n">slots</span><span class="p">[</span><span class="n">tgt_slot</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>     <span class="c1"># remove target from its old slot list</span>
+                <span class="n">slots</span><span class="p">[</span><span class="n">orig_slot</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>    <span class="c1"># add target to c&#39;s old slot</span>
+
                 <span class="c1"># update professor schedules so later moves respect this swap</span>
-                <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">slot</span><span class="p">)</span>
+                <span class="n">prof_busy</span><span class="p">[</span><span class="n">c_prof</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">tgt_slot</span><span class="p">)</span>
+                <span class="n">prof_busy</span><span class="p">[</span><span class="n">target</span><span class="p">[</span><span class="s2">&quot;prof_id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">orig_slot</span><span class="p">)</span>
+                <span class="n">swapped</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">c</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="n">target</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]})</span>
                 <span class="k">break</span>                      
 
     <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">recommendations</span><span class="p">)</span></div>
@@ -294,13 +322,11 @@
     <span class="k">if</span> <span class="n">cross</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">=== CROSS-SLOT RECOMMENDATIONS ===&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">slot</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cross</span><span class="p">):</span>
-            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">slot</span><span class="si">}</span><span class="s2">:&quot;</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">rec</span> <span class="ow">in</span> <span class="n">cross</span><span class="p">[</span><span class="n">slot</span><span class="p">]:</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  • </span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;crowded_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)  →  &quot;</span>
                     <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_class_name&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="s1">&#39;target_room&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">No cross-slot swaps needed.&quot;</span><span class="p">)</span>
-
 </pre></div>
 
            </div>

@@ -53,6 +53,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#app.get_classes"><code class="docutils literal notranslate"><span class="pre">get_classes()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.get_possible_reassignments"><code class="docutils literal notranslate"><span class="pre">get_possible_reassignments()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.get_professors"><code class="docutils literal notranslate"><span class="pre">get_professors()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app.get_swap_recommendations"><code class="docutils literal notranslate"><span class="pre">get_swap_recommendations()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.insert_csv_into_table"><code class="docutils literal notranslate"><span class="pre">insert_csv_into_table()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.parse_csv"><code class="docutils literal notranslate"><span class="pre">parse_csv()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#app.swap_classes"><code class="docutils literal notranslate"><span class="pre">swap_classes()</span></code></a></li>
@@ -218,6 +219,13 @@ from the <code class="docutils literal notranslate"><span class="pre">classes</s
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="app.get_swap_recommendations">
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">get_swap_recommendations</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#get_swap_recommendations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.get_swap_recommendations" title="Link to this definition"></a></dt>
+<dd><p>Run the algorithm to get swap recommendations for classes
+and show them to the user (class coordinators).</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="app.insert_csv_into_table">
 <span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">insert_csv_into_table</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">course_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#insert_csv_into_table"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.insert_csv_into_table" title="Link to this definition"></a></dt>
 <dd><p>Insert parsed CSV data into the <code class="docutils literal notranslate"><span class="pre">classes</span></code> table.</p>
@@ -248,7 +256,7 @@ from the <code class="docutils literal notranslate"><span class="pre">classes</s
 
 <dl class="py function">
 <dt class="sig sig-object py" id="app.swap_classes">
-<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">swap_classes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">class_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">swap_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#swap_classes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.swap_classes" title="Link to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">app.</span></span><span class="sig-name descname"><span class="pre">swap_classes</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/app.html#swap_classes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#app.swap_classes" title="Link to this definition"></a></dt>
 <dd><p>Swaps two classes’ data.</p>
 <p>Both classes have to reside in the database.</p>
 <dl class="field-list simple">
