@@ -606,6 +606,8 @@ def export_to_csv():
     :status 404: No database or error accessing records.
     """
     conn = sqlite3.connect(DB_FILE)
+    desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+    output_destination = os.path.join(desktop_path, "output.csv")
     # check to make sure the connection worked
     # likely will remove this later. I'm thinking we disable the button if theres no database/problems if possible
     try:
@@ -620,12 +622,12 @@ def export_to_csv():
             # start overwriting the csv file. start with writing the date
             data = next(reader)
             season, year = data[0].split(' ')
-            with open("output.csv", "w", newline='', encoding="utf-8") as out_file:
+            with open(output_destination, "w", newline='', encoding="utf-8") as out_file:
                 writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
                 writer.writerow([f'{season} {year}'])
 
             # append date, then column headers
-            with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
+            with open(output_destination, "a", newline='', encoding="utf-8") as out_file:
                 next(reader) # skip date in the input
                 writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
 
@@ -645,7 +647,7 @@ def export_to_csv():
             cursor.execute("SELECT * FROM classes")
             for row in reader:
                 if len(row) > 1: # process new data
-                    with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
+                    with open(output_destination, "a", newline='', encoding="utf-8") as out_file:
                         writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
                         
                         # instead of searching via an incrementing id, write each row of the database one by one
@@ -662,7 +664,7 @@ def export_to_csv():
 
                         writer.writerow(data)
                 else: # copy row
-                    with open("output.csv", "a", newline='', encoding="utf-8") as out_file:
+                    with open(output_destination, "a", newline='', encoding="utf-8") as out_file:
                         writer = csv.writer(out_file, quoting=csv.QUOTE_NOTNULL)
                         writer.writerow(row)
     except Exception:
