@@ -6,7 +6,6 @@ import HomePage from '@/pages/HomePage.vue'
 
 
 describe('Homepage.vue', () => {
-
   const wrapper = mount(HomePage)
   const importButton = wrapper.findAll('button').filter(b => b.text().match('Import CSV')).at(0)
   const algoButton = wrapper.findAll('button').filter(b => b.text().match('RUN ALGORITHM')).at(0)
