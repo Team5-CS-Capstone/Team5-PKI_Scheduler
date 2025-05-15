@@ -204,11 +204,10 @@ def test_swap_classes_success(client, tmp_path):
     class2_id = cursor.execute("SELECT id FROM classes WHERE courseName = 'CSCI1020'").fetchone()[0]
     conn.close()
 
-    # Prepare the swap request
     payload = {
         "crowded_id": class1_id,
         "target_id": class2_id,
-        "different_timeslot": False  # Try True also in another test
+        "different_timeslot": False  
     }
 
     response = client.post("/swap-classrooms", json=payload)
@@ -225,3 +224,184 @@ def test_swap_classes_success(client, tmp_path):
 
     assert updated1 == (40, "PKI 170")  # c1 now has c2's values
     assert updated2 == (30, "PKI 160")  # c2 now has c1's values
+
+def test_swap_recommendations_sameslot(client, tmp_path):
+
+    db_path = tmp_path / "test.db"
+    app.config["DB_FILE"] = str(db_path)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Create necessary tables
+    cursor.execute('''
+        CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT,
+            course TEXT,
+            section TEXT,
+            course_title TEXT,
+            room TEXT,
+            meeting_pattern TEXT,
+            enrollment INTEGER,
+            max_enrollment INTEGER,
+            instructor TEXT,
+            course_number TEXT
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE class_professors (
+            class_id INTEGER,
+            professor_id INTEGER
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE professors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    ''')
+
+    # Insert test data
+    cursor.executemany('INSERT INTO professors (name) VALUES (?)', [("Dr. A",), ("Dr. B",), ("Dr. C",)])
+
+    test_classes = [
+        ("Fall 2025", "CSCI1010", "001", "Intro to CS", "PKI 160", "TTh 9:00-10:15", 35, 30, "Dr. A", "CSCI1010"),
+        ("Fall 2025", "CSCI1020", "001", "Data Structures", "PKI 170", "TTh 9:00-10:15", 15, 40, "Dr. B", "CSCI1020"),
+        ("Fall 2025", "CSCI1030", "001", "Algorithms", "PKI 180", "MW 11:30-12:45", 25, 30, "Dr. C", "CSCI1030"),
+    ]
+    cursor.executemany('''
+        INSERT INTO classes (term, course, section, course_title, room, meeting_pattern, enrollment, max_enrollment, instructor, course_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', test_classes)
+
+    # Link professors to classes 
+    cursor.executemany('INSERT INTO class_professors (class_id, professor_id) VALUES (?, ?)', [(1, 1), (2, 2), (3, 3)])
+
+    conn.commit()
+    conn.close()
+
+    response = client.get("/swap-recommendations")
+    assert response.status_code == 200
+
+    data = response.get_json()
+    print(data)
+    assert "same_slot_swaps" in data
+    assert "cross_slot_recommendations" in data
+    
+def test_swap_recommendations_differentslot(client, tmp_path):
+
+    db_path = tmp_path / "test.db"
+    app.config["DB_FILE"] = str(db_path)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Create necessary tables
+    cursor.execute('''
+        CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT,
+            course TEXT,
+            section TEXT,
+            course_title TEXT,
+            room TEXT,
+            meeting_pattern TEXT,
+            enrollment INTEGER,
+            max_enrollment INTEGER,
+            instructor TEXT,
+            course_number TEXT
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE class_professors (
+            class_id INTEGER,
+            professor_id INTEGER
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE professors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    ''')
+
+    # Insert test data
+    cursor.executemany('INSERT INTO professors (name) VALUES (?)', [("Dr. A",), ("Dr. B",), ("Dr. C",)])
+
+    test_classes = [
+        ("Fall 2025", "CSCI1010", "001", "Intro to CS", "PKI 160", "TTh 9:00-10:15", 35, 30, "Dr. A", "CSCI1010"),
+        ("Fall 2025", "CSCI1020", "001", "Data Structures", "PKI 170", "MW 9:00-10:15", 15, 40, "Dr. B", "CSCI1020"),
+        ("Fall 2025", "CSCI1030", "001", "Algorithms", "PKI 180", "MW 11:30-12:45", 25, 30, "Dr. C", "CSCI1030"),
+    ]
+    cursor.executemany('''
+        INSERT INTO classes (term, course, section, course_title, room, meeting_pattern, enrollment, max_enrollment, instructor, course_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', test_classes)
+
+    # Link professors to classes 
+    cursor.executemany('INSERT INTO class_professors (class_id, professor_id) VALUES (?, ?)', [(1, 1), (2, 2), (3, 3)])
+
+    conn.commit()
+    conn.close()
+
+    response = client.get("/swap-recommendations")
+    assert response.status_code == 200
+
+    data = response.get_json()
+    print(data)
+    assert "same_slot_swaps" in data
+    assert "cross_slot_recommendations" in data
+
+
+def test_swap_recommendations_no_classes(client, tmp_path):
+    db_path = tmp_path / "test.db"
+    app.config["DB_FILE"] = str(db_path)
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    # Create necessary tables, but don't insert any data
+    cursor.execute('''
+        CREATE TABLE classes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            term TEXT,
+            course TEXT,
+            section TEXT,
+            course_title TEXT,
+            room TEXT,
+            meeting_pattern TEXT,
+            enrollment INTEGER,
+            max_enrollment INTEGER,
+            instructor TEXT,
+            course_number TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE class_professors (
+            class_id INTEGER,
+            professor_id INTEGER
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE professors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+    # Make the GET request with an empty DB
+    response = client.get("/swap-recommendations")
+    assert response.status_code == 200
+
+    data = response.get_json()
+    print(data)
+    assert data["same_slot_swaps"] == {}
+    assert data["cross_slot_recommendations"] == {}
