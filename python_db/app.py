@@ -24,7 +24,7 @@ app = Flask(__name__)
 CORS(app, supports_credentials=True)
 
 # Our SQLite database file
-DB_FILE = "database.db"
+app.config["DB_FILE"] = "database.db"
 # Document Uploads file
 BASE_DIR       = Path(__file__).resolve().parent          # folder that holds app.py
 AUDIT_DIR      = BASE_DIR / "audit_logs"
@@ -51,7 +51,7 @@ def get_possible_reassignments(class_id):
     :return: JSON response containing the list of possible reassignments.
     :rtype: flask.Response
     """
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(app.config["DB_FILE"])
     conn.row_factory = sqlite3.Row # Enable row factory to access columns by name
     cursor = conn.cursor()
 
@@ -87,7 +87,7 @@ def get_classes():
     :return: JSON response containing the list of class objects along with an HTTP 200 status.
     :rtype: flask.Response
     """
-    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    conn = sqlite3.connect(app.config["DB_FILE"])  # Connect to database
     cursor = conn.cursor()
 
     cursor.execute("SELECT id, section, course_number, course_title, enrollment, max_enrollment FROM classes")
@@ -120,7 +120,7 @@ def get_professors(class_id):
     :return: JSON response containing the list of professors for the specified class.
     :rtype: flask.Response
     """
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(app.config["DB_FILE"])
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -181,7 +181,7 @@ def get_class_details(class_id):
         dict:
             A dictionary of class details.
     """
-    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    conn = sqlite3.connect(app.config["DB_FILE"])  # Connect to database
     cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM classes WHERE id = ?", (class_id,))
@@ -243,7 +243,7 @@ def create_tables():
 
     If it exists, it is dropped before re-creation.
     """
-    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    conn = sqlite3.connect(app.config["DB_FILE"])  # Connect to database
     cursor = conn.cursor()
 
     # Drop the 'classes' table if it exists
@@ -300,7 +300,7 @@ def insert_csv_into_table(course_data):
     :param course_data: List of dictionaries with course info.
     :type course_data: list
     """
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(app.config["DB_FILE"])
     cursor = conn.cursor()
 
     # Start the crosslist checking and generating the dictionary dynamically based on if a class is crosslisted
@@ -464,7 +464,7 @@ def update_enrollment(class_id):
     data = request.get_json()
     action = data.get("action")
 
-    conn = sqlite3.connect(DB_FILE)  # Connect to database
+    conn = sqlite3.connect(app.config["DB_FILE"])  # Connect to database
     cursor = conn.cursor()
     cursor.execute("SELECT enrollment, max_enrollment FROM classes WHERE id = ?", (class_id,))
     row = cursor.fetchone()
@@ -506,8 +506,11 @@ def get_swap_recommendations():
     Run the algorithm to get swap recommendations for classes
     and show them to the user (class coordinators).
     """
-    same_slot_swaps, not_swappable = recommend_swaps_per_timeslot(DB_FILE)
-    cross_slot_recommendations = recommended_swaps_if_no_swaps_in_same_timeslot(DB_FILE, not_swappable)
+
+    db_path = app.config["DB_FILE"]
+
+    same_slot_swaps, not_swappable = recommend_swaps_per_timeslot(db_path)
+    cross_slot_recommendations = recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable)
 
     # Combine the recommendations into a single response
     return jsonify(
@@ -553,7 +556,7 @@ def swap_classes():
         c1["time"], c2["time"] = (c2["time"], c1["time"]) if different_timeslot else (c1["time"], c2["time"])
 
         try:
-            conn = sqlite3.connect(DB_FILE)
+            conn = sqlite3.connect(app.config["DB_FILE"])
             cursor = conn.cursor()
             cursor.execute('UPDATE classes SET max_enrollment = ?, room = ?, meeting_pattern = ? WHERE id = ?', 
                 (c1["maxEnrollment"], c1["room"], c1["time"], c1["id"]))
@@ -564,16 +567,16 @@ def swap_classes():
             if different_timeslot:
                 log_swap = (
                     f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S} - "\
-                    f"SAME-TIME SLOT SWAP: {c1["time"]}\n"
-                    f"{c1["courseName"]} ({c2["room"]}) -> "
-                    f"{c2["courseName"]} ({c1["room"]})\n"
+                    f"SAME-TIME SLOT SWAP: {c1['time']}\n"
+                    f"{c1['courseName']} ({c2['room']}) -> "
+                    f"{c2['courseName']} ({c1['room']})\n"
                 )
             else:  
                 log_swap = (
                     f"\n{datetime.datetime.now():%Y-%m-%d %H:%M:%S} - "\
-                    f"DIFFERENT-TIME SLOT SWAP: {c1["time"]} -> {c2["time"]}\n"
-                    f"{c1["courseName"]} ({c2["room"]}) -> "
-                    f"{c2["courseName"]} ({c1["room"]})\n"
+                    f"DIFFERENT-TIME SLOT SWAP: {c1['time']} -> {c2['time']}\n"
+                    f"{c1['courseName']} ({c2['room']}) -> "
+                    f"{c2['courseName']} ({c1['room']})\n"
                 )
 
             with open(swap_file, "a") as logfile:
@@ -605,7 +608,9 @@ def export_to_csv():
     :status 200: Successfully exported data to file.
     :status 404: No database or error accessing records.
     """
-    conn = sqlite3.connect(DB_FILE)
+    global file_path
+
+    conn = sqlite3.connect(app.config["DB_FILE"])
     desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
     output_destination = os.path.join(desktop_path, "output.csv")
     # check to make sure the connection worked
