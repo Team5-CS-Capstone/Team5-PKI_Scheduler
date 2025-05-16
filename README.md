@@ -149,3 +149,13 @@ Our branching strategy is very simple: each user has their branch which they pus
 - **Very** basic algorithm implemented for determining sufficient class locations
 - Menu to select a class to swap with
 - API endpoint to swap necessary class information
+
+#### Milestone #5:
+- Algorithm finished to check for different time slot swaps
+- Algorithm results implemented into the UI, with the ability to swap
+- Exporting to CSV is fixed to work with changes in the database
+- Swap API endpoint changed to work for all uses in the application
+- Filter classes button moved to top of UI for cleaner UX
+- Logging is done on all class swaps into a text file for class coordinators to view if needed
+- Back button added in the class details page for each class for cleaner UI/UX
+- Testing is being added now, and after the video is posted
