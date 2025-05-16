@@ -1,0 +1,536 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>test_app &mdash; PKI Scheduler - Team 5 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=d45e8c67"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PKI Scheduler - Team 5
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">python-db</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../jsdoc.html">JSDoc Documentation</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PKI Scheduler - Team 5</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">test_app</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for test_app</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pytest</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sqlite3</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">app</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span>
+
+<div class="viewcode-block" id="setup_database">
+<a class="viewcode-back" href="../test_app.html#test_app.setup_database">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">(</span><span class="n">autouse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_database</span><span class="p">():</span>
+    <span class="c1"># Create the classes table if it doesn&#39;t exist</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;DB_FILE&quot;</span><span class="p">])</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        CREATE TABLE IF NOT EXISTS classes (</span>
+<span class="s2">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">            term TEXT,</span>
+<span class="s2">            course_number TEXT,</span>
+<span class="s2">            section TEXT,</span>
+<span class="s2">            course_title TEXT,</span>
+<span class="s2">            room TEXT,</span>
+<span class="s2">            meeting_pattern TEXT,</span>
+<span class="s2">            enrollment INTEGER,</span>
+<span class="s2">            max_enrollment INTEGER</span>
+<span class="s2">        )</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="client">
+<a class="viewcode-back" href="../test_app.html#test_app.client">[docs]</a>
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">app</span><span class="o">.</span><span class="n">test_client</span><span class="p">()</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">client</span></div>
+
+
+<span class="c1"># Classes page confirmation</span>
+<div class="viewcode-block" id="test_get_classes">
+<a class="viewcode-back" href="../test_app.html#test_app.test_get_classes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_get_classes</span><span class="p">(</span><span class="n">client</span><span class="p">):</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;/classes&#39;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">(),</span> <span class="nb">list</span><span class="p">)</span></div>
+
+
+<span class="c1"># Testing a successful import</span>
+<div class="viewcode-block" id="test_upload_success">
+<a class="viewcode-back" href="../test_app.html#test_app.test_upload_success">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_upload_success</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">mocker</span><span class="p">):</span>
+    <span class="c1"># Realistic CSV content for a couple columns of our database</span>
+    <span class="n">csv_content</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;&quot;Term,Course,Section #,Course Title,Room,Meeting Pattern,Enrollment,Maximum Enrollment,Cross-listings,Instructor,Cross-list Maximum</span>
+<span class="s2">Fall 2025,CSCI1010,001,Intro to CS,PKI 160,TTh 9:00-10:15,28,30,,Dr. Smith,</span>
+<span class="s2">Fall 2025,CSCI1020,002,Data Structures,PKI 170,MW 10:30-11:45,32,30,CSCI1030,Dr. Doe,50</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">csv_content</span><span class="p">),</span> <span class="s1">&#39;test.csv&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="c1"># Mock downstream dependencies</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.fix_csv&#39;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="s1">&#39;uploads/test.csv&#39;</span><span class="p">)</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.create_tables&#39;</span><span class="p">)</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.parse_csv&#39;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;Term&quot;</span><span class="p">:</span> <span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Course&quot;</span><span class="p">:</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Section #&quot;</span><span class="p">:</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Course Title&quot;</span><span class="p">:</span> <span class="s2">&quot;Intro to CS&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Room&quot;</span><span class="p">:</span> <span class="s2">&quot;PKI 160&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;TTh 9:00-10:15&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Enrollment&quot;</span><span class="p">:</span> <span class="s2">&quot;28&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">:</span> <span class="s2">&quot;30&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Cross-listings&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Instructor&quot;</span><span class="p">:</span> <span class="s2">&quot;Dr. Smith&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">},</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;Term&quot;</span><span class="p">:</span> <span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Course&quot;</span><span class="p">:</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Section #&quot;</span><span class="p">:</span> <span class="s2">&quot;002&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Course Title&quot;</span><span class="p">:</span> <span class="s2">&quot;Data Structures&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Room&quot;</span><span class="p">:</span> <span class="s2">&quot;PKI 170&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Meeting Pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;MW 10:30-11:45&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Enrollment&quot;</span><span class="p">:</span> <span class="s2">&quot;32&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Maximum Enrollment&quot;</span><span class="p">:</span> <span class="s2">&quot;30&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Cross-listings&quot;</span><span class="p">:</span> <span class="s2">&quot;CSCI1030&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Instructor&quot;</span><span class="p">:</span> <span class="s2">&quot;Dr. Doe&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Cross-list Maximum&quot;</span><span class="p">:</span> <span class="s2">&quot;50&quot;</span>
+        <span class="p">}</span>
+    <span class="p">])</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.insert_csv_into_table&#39;</span><span class="p">)</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/upload&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;multipart/form-data&#39;</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+    <span class="n">json_data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">json_data</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">&quot;message&quot;</span> <span class="ow">in</span> <span class="n">json_data</span> <span class="ow">and</span> <span class="n">json_data</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;File uploaded successfully!&quot;</span>
+    <span class="k">assert</span> <span class="s2">&quot;file_path&quot;</span> <span class="ow">in</span> <span class="n">json_data</span></div>
+
+
+<span class="c1"># Testing import for errors</span>
+<div class="viewcode-block" id="test_upload_processing_error">
+<a class="viewcode-back" href="../test_app.html#test_app.test_upload_processing_error">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_upload_processing_error</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">mocker</span><span class="p">):</span>
+    <span class="n">csv_content</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;&quot;&quot;Term,Course,Section #,Course Title,Room,Meeting Pattern,Enrollment,Maximum Enrollment,Cross-listings,Instructor,Cross-list Maximum</span>
+<span class="s2">Fall 2025,CSCI9999,999,Fake Course,Nowhere,None,0,0,,None,</span>
+<span class="s2">&quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">csv_content</span><span class="p">),</span> <span class="s1">&#39;bad.csv&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.fix_csv&#39;</span><span class="p">,</span> <span class="n">return_value</span><span class="o">=</span><span class="s1">&#39;uploads/bad.csv&#39;</span><span class="p">)</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.create_tables&#39;</span><span class="p">)</span>
+    <span class="n">mocker</span><span class="o">.</span><span class="n">patch</span><span class="p">(</span><span class="s1">&#39;app.parse_csv&#39;</span><span class="p">,</span> <span class="n">side_effect</span><span class="o">=</span><span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Simulated parse failure&quot;</span><span class="p">))</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s1">&#39;/upload&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">content_type</span><span class="o">=</span><span class="s1">&#39;multipart/form-data&#39;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">400</span>
+    <span class="k">assert</span> <span class="s2">&quot;Simulated parse failure&quot;</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()[</span><span class="s2">&quot;error&quot;</span><span class="p">]</span></div>
+
+
+<span class="c1"># def test_export_success(client, tmp_path):</span>
+<span class="c1">#     csv_content = b&quot;&quot;&quot;Fall 2025</span>
+<span class="c1"># Generated Placeholder</span>
+<span class="c1"># ,Term,Course,Section #,Course Title,Room,Meeting Pattern,Enrollment,Maximum Enrollment,Cross-listings,Instructor,Cross-list Maximum</span>
+<span class="c1"># ,Fall 2025,CSCI1010,001,Intro to CS,PKI 160,TTh 9:00-10:15,28,30,,Dr. Smith,</span>
+<span class="c1"># &quot;&quot;&quot;</span>
+
+<span class="c1">#     # mock an input csv file</span>
+<span class="c1">#     mock_input_path = tmp_path / &quot;mock_input.csv&quot;</span>
+<span class="c1">#     mock_input_path.write_bytes(csv_content)</span>
+
+<span class="c1">#     # Patch the global file_path inside app</span>
+<span class="c1">#     app.file_path = str(mock_input_path)</span>
+
+<span class="c1">#     desktop_dir = tmp_path / &quot;Desktop&quot;</span>
+<span class="c1">#     desktop_dir.mkdir()</span>
+<span class="c1">#     os.environ[&quot;USERPROFILE&quot;] = str(tmp_path)</span>
+
+<span class="c1">#     # create mock database</span>
+<span class="c1">#     db_path = tmp_path / &quot;test.db&quot;</span>
+<span class="c1">#     app.config[&quot;DB_FILE&quot;] = str(db_path)</span>
+<span class="c1">#     conn = sqlite3.connect(db_path)</span>
+<span class="c1">#     cursor = conn.cursor()</span>
+
+<span class="c1">#     cursor.execute(&#39;&#39;&#39;</span>
+<span class="c1">#         CREATE TABLE classes (</span>
+<span class="c1">#             id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="c1">#             term TEXT,</span>
+<span class="c1">#             course TEXT,</span>
+<span class="c1">#             section TEXT,</span>
+<span class="c1">#             course_title TEXT,</span>
+<span class="c1">#             room TEXT,</span>
+<span class="c1">#             meeting_pattern TEXT,</span>
+<span class="c1">#             enrollment INTEGER</span>
+<span class="c1">#         )</span>
+<span class="c1">#     &#39;&#39;&#39;)</span>
+<span class="c1">#     cursor.execute(&quot;INSERT INTO classes (term, course, section, course_title, room, meeting_pattern, enrollment) VALUES (?, ?, ?, ?, ?, ?, ?)&quot;,</span>
+<span class="c1">#                    (&quot;Fall 2025&quot;, &quot;CSCI1010&quot;, &quot;001&quot;, &quot;Intro to CS&quot;, &quot;PKI 160&quot;, &quot;TTh 9:00-10:15&quot;, 35))</span>
+<span class="c1">#     conn.commit()</span>
+<span class="c1">#     conn.close()</span>
+
+<span class="c1">#     # get a response from the export path</span>
+<span class="c1">#     response = client.put(&quot;/export&quot;)</span>
+<span class="c1">#     assert response.status_code == 200</span>
+<span class="c1">#     assert &quot;Successfully exported&quot; in response.get_json()</span>
+
+<span class="c1">#     # check that an output file was created</span>
+<span class="c1">#     output_file = desktop_dir / &quot;output.csv&quot;</span>
+<span class="c1">#     assert output_file.exists()</span>
+
+<span class="c1">#     with open(output_file, newline=&#39;&#39;, encoding=&quot;utf-8&quot;) as f:</span>
+<span class="c1">#         reader = list(csv.reader(f))</span>
+<span class="c1">#         assert reader[0][0] == &quot;Fall 2025&quot;</span>
+<span class="c1">#         assert &quot;Generated&quot; in reader[1][0]</span>
+<span class="c1">#         assert reader[3][7] == &quot;35&quot;</span>
+
+
+<div class="viewcode-block" id="test_swap_classes_success">
+<a class="viewcode-back" href="../test_app.html#test_app.test_swap_classes_success">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_swap_classes_success</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">tmp_path</span><span class="p">):</span>
+    
+    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;DB_FILE&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    
+    <span class="c1"># Create test database</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    CREATE TABLE classes (</span>
+<span class="s2">        id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s2">        term TEXT,</span>
+<span class="s2">        courseName TEXT,</span>
+<span class="s2">        section TEXT,</span>
+<span class="s2">        course_title TEXT,</span>
+<span class="s2">        room TEXT,</span>
+<span class="s2">        meeting_pattern TEXT,</span>
+<span class="s2">        enrollment INTEGER,</span>
+<span class="s2">        max_enrollment INTEGER</span>
+<span class="s2">    )</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+    <span class="c1"># Insert two classes</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    INSERT INTO classes (term, courseName, section, course_title, room, meeting_pattern, enrollment, max_enrollment)</span>
+<span class="s2">    VALUES (?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Intro to CS&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 160&quot;</span><span class="p">,</span> <span class="s2">&quot;TTh 9:00-10:15&quot;</span><span class="p">,</span> <span class="mi">28</span><span class="p">,</span> <span class="mi">30</span><span class="p">))</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    INSERT INTO classes (term, courseName, section, course_title, room, meeting_pattern, enrollment, max_enrollment)</span>
+<span class="s2">    VALUES (?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">,</span> <span class="s2">&quot;002&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Structures&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 170&quot;</span><span class="p">,</span> <span class="s2">&quot;MW 10:30-11:45&quot;</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">40</span><span class="p">))</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">class1_id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT id FROM classes WHERE courseName = &#39;CSCI1010&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">class2_id</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT id FROM classes WHERE courseName = &#39;CSCI1020&#39;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;crowded_id&quot;</span><span class="p">:</span> <span class="n">class1_id</span><span class="p">,</span>
+        <span class="s2">&quot;target_id&quot;</span><span class="p">:</span> <span class="n">class2_id</span><span class="p">,</span>
+        <span class="s2">&quot;different_timeslot&quot;</span><span class="p">:</span> <span class="kc">False</span>  
+    <span class="p">}</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;/swap-classrooms&quot;</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span> <span class="ow">or</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;Successfully swapped classes.&quot;</span>
+
+    <span class="c1"># check the database to verify values were swapped</span>
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">updated1</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT max_enrollment, room FROM classes WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class1_id</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="n">updated2</span> <span class="o">=</span> <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT max_enrollment, room FROM classes WHERE id = ?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">class2_id</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">updated1</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">updated2</span><span class="p">)</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">assert</span> <span class="n">updated1</span> <span class="o">==</span> <span class="p">(</span><span class="mi">40</span><span class="p">,</span> <span class="s2">&quot;PKI 170&quot;</span><span class="p">)</span>  <span class="c1"># c1 now has c2&#39;s values</span>
+    <span class="k">assert</span> <span class="n">updated2</span> <span class="o">==</span> <span class="p">(</span><span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;PKI 160&quot;</span><span class="p">)</span>  <span class="c1"># c2 now has c1&#39;s values</span></div>
+
+
+<div class="viewcode-block" id="test_swap_recommendations_sameslot">
+<a class="viewcode-back" href="../test_app.html#test_app.test_swap_recommendations_sameslot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_swap_recommendations_sameslot</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">tmp_path</span><span class="p">):</span>
+
+    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;DB_FILE&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># Create necessary tables</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE classes (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            term TEXT,</span>
+<span class="s1">            course TEXT,</span>
+<span class="s1">            section TEXT,</span>
+<span class="s1">            course_title TEXT,</span>
+<span class="s1">            room TEXT,</span>
+<span class="s1">            meeting_pattern TEXT,</span>
+<span class="s1">            enrollment INTEGER,</span>
+<span class="s1">            max_enrollment INTEGER,</span>
+<span class="s1">            instructor TEXT,</span>
+<span class="s1">            course_number TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE class_professors (</span>
+<span class="s1">            class_id INTEGER,</span>
+<span class="s1">            professor_id INTEGER</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE professors (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            name TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Insert test data</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;INSERT INTO professors (name) VALUES (?)&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;Dr. A&quot;</span><span class="p">,),</span> <span class="p">(</span><span class="s2">&quot;Dr. B&quot;</span><span class="p">,),</span> <span class="p">(</span><span class="s2">&quot;Dr. C&quot;</span><span class="p">,)])</span>
+
+    <span class="n">test_classes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Intro to CS&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 160&quot;</span><span class="p">,</span> <span class="s2">&quot;TTh 9:00-10:15&quot;</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;Dr. A&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Structures&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 170&quot;</span><span class="p">,</span> <span class="s2">&quot;TTh 9:00-10:15&quot;</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="s2">&quot;Dr. B&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1030&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Algorithms&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 180&quot;</span><span class="p">,</span> <span class="s2">&quot;MW 11:30-12:45&quot;</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;Dr. C&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1030&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        INSERT INTO classes (term, course, section, course_title, room, meeting_pattern, enrollment, max_enrollment, instructor, course_number)</span>
+<span class="s1">        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">,</span> <span class="n">test_classes</span><span class="p">)</span>
+
+    <span class="c1"># Link professors to classes </span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;INSERT INTO class_professors (class_id, professor_id) VALUES (?, ?)&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/swap-recommendations&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">&quot;same_slot_swaps&quot;</span> <span class="ow">in</span> <span class="n">data</span>
+    <span class="k">assert</span> <span class="s2">&quot;cross_slot_recommendations&quot;</span> <span class="ow">in</span> <span class="n">data</span></div>
+
+    
+<div class="viewcode-block" id="test_swap_recommendations_differentslot">
+<a class="viewcode-back" href="../test_app.html#test_app.test_swap_recommendations_differentslot">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_swap_recommendations_differentslot</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">tmp_path</span><span class="p">):</span>
+
+    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;DB_FILE&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># Create necessary tables</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE classes (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            term TEXT,</span>
+<span class="s1">            course TEXT,</span>
+<span class="s1">            section TEXT,</span>
+<span class="s1">            course_title TEXT,</span>
+<span class="s1">            room TEXT,</span>
+<span class="s1">            meeting_pattern TEXT,</span>
+<span class="s1">            enrollment INTEGER,</span>
+<span class="s1">            max_enrollment INTEGER,</span>
+<span class="s1">            instructor TEXT,</span>
+<span class="s1">            course_number TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE class_professors (</span>
+<span class="s1">            class_id INTEGER,</span>
+<span class="s1">            professor_id INTEGER</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE professors (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            name TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Insert test data</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;INSERT INTO professors (name) VALUES (?)&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s2">&quot;Dr. A&quot;</span><span class="p">,),</span> <span class="p">(</span><span class="s2">&quot;Dr. B&quot;</span><span class="p">,),</span> <span class="p">(</span><span class="s2">&quot;Dr. C&quot;</span><span class="p">,)])</span>
+
+    <span class="n">test_classes</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Intro to CS&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 160&quot;</span><span class="p">,</span> <span class="s2">&quot;TTh 9:00-10:15&quot;</span><span class="p">,</span> <span class="mi">35</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;Dr. A&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1010&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Data Structures&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 170&quot;</span><span class="p">,</span> <span class="s2">&quot;MW 9:00-10:15&quot;</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="mi">40</span><span class="p">,</span> <span class="s2">&quot;Dr. B&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1020&quot;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s2">&quot;Fall 2025&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1030&quot;</span><span class="p">,</span> <span class="s2">&quot;001&quot;</span><span class="p">,</span> <span class="s2">&quot;Algorithms&quot;</span><span class="p">,</span> <span class="s2">&quot;PKI 180&quot;</span><span class="p">,</span> <span class="s2">&quot;MW 11:30-12:45&quot;</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;Dr. C&quot;</span><span class="p">,</span> <span class="s2">&quot;CSCI1030&quot;</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        INSERT INTO classes (term, course, section, course_title, room, meeting_pattern, enrollment, max_enrollment, instructor, course_number)</span>
+<span class="s1">        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">,</span> <span class="n">test_classes</span><span class="p">)</span>
+
+    <span class="c1"># Link professors to classes </span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">executemany</span><span class="p">(</span><span class="s1">&#39;INSERT INTO class_professors (class_id, professor_id) VALUES (?, ?)&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">)])</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/swap-recommendations&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="s2">&quot;same_slot_swaps&quot;</span> <span class="ow">in</span> <span class="n">data</span>
+    <span class="k">assert</span> <span class="s2">&quot;cross_slot_recommendations&quot;</span> <span class="ow">in</span> <span class="n">data</span></div>
+
+
+
+<div class="viewcode-block" id="test_swap_recommendations_no_classes">
+<a class="viewcode-back" href="../test_app.html#test_app.test_swap_recommendations_no_classes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_swap_recommendations_no_classes</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">tmp_path</span><span class="p">):</span>
+    <span class="n">db_path</span> <span class="o">=</span> <span class="n">tmp_path</span> <span class="o">/</span> <span class="s2">&quot;test.db&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;DB_FILE&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+
+    <span class="n">conn</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+    <span class="n">cursor</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+
+    <span class="c1"># Create necessary tables, but don&#39;t insert any data</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE classes (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            term TEXT,</span>
+<span class="s1">            course TEXT,</span>
+<span class="s1">            section TEXT,</span>
+<span class="s1">            course_title TEXT,</span>
+<span class="s1">            room TEXT,</span>
+<span class="s1">            meeting_pattern TEXT,</span>
+<span class="s1">            enrollment INTEGER,</span>
+<span class="s1">            max_enrollment INTEGER,</span>
+<span class="s1">            instructor TEXT,</span>
+<span class="s1">            course_number TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE class_professors (</span>
+<span class="s1">            class_id INTEGER,</span>
+<span class="s1">            professor_id INTEGER</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s1">&#39;&#39;&#39;</span>
+<span class="s1">        CREATE TABLE professors (</span>
+<span class="s1">            id INTEGER PRIMARY KEY AUTOINCREMENT,</span>
+<span class="s1">            name TEXT</span>
+<span class="s1">        )</span>
+<span class="s1">    &#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c1"># Make the GET request with an empty DB</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/swap-recommendations&quot;</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">200</span>
+
+    <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">get_json</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;same_slot_swaps&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">{}</span>
+    <span class="k">assert</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;cross_slot_recommendations&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="p">{}</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Charlie, Zaid, Brian, John, Brady.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

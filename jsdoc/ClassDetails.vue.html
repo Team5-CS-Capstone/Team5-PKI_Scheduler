@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: ClassDetails.vue</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: ClassDetails.vue</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>&lt;template>
+    &lt;!-- Pop-up modal for classroom reassignment options -->
+    &lt;div v-if="reassignmentModalVisible &amp;&amp; !loadingReassignments"
+        class="fixed inset-0 flex items-center justify-center bg-black/40">
+        &lt;div class="bg-white p-4 h- w-8/12 rounded shadow">
+            &lt;div class="flex flex-col justify-between h-full items-center bg-white">
+                &lt;div class="w-full p-4 space-y-4 bg-white border rounded">
+                    &lt;p v-if="noReassignments" class="text-2xl text-red-600">No available class swaps.&lt;/p>
+                    &lt;div v-else>
+                        &lt;p class="text-2xl text-gray-600 font-semibold pb-4">Select a room to reassign the class:&lt;/p>
+                        &lt;!-- Column Headers -->
+                        &lt;div class="grid grid-cols-[3fr_3fr_3fr_1fr] p-4 bg-gray-400 rounded-t-4xl w-full">
+                            &lt;span class="px-2 font-bold text-sm text-gray-700">Course Number&lt;/span>
+                            &lt;span class="font-bold text-sm text-gray-700">Room and Meeting Pattern&lt;/span>
+                            &lt;span class="font-bold text-sm text-gray-700">Enrollment / Max Enrollment&lt;/span>
+                            &lt;span class="font-bold text-sm text-gray-700">&lt;/span>
+                        &lt;/div>
+                        &lt;ul
+                            class="grid grid-cols-[3fr_3fr_3fr_1fr] gap-y-2 border-2 border-gray-300 rounded-lg max-h-96 overflow-y-scroll">
+                            &lt;li v-for="(options, index) in possibleReassignments" :key="options.room" class="contents">
+                                &lt;span class="p-4 font-medium text-sm text-gray-700">Option {{ index + 1 }} - {{
+                                    options.course_number }}&lt;/span>
+                                &lt;span class="p-4 font-medium text-sm text-gray-700">{{ options.room }} {{
+                                    options.meeting_pattern }}&lt;/span>
+                                &lt;span class="p-4 font-medium text-sm text-gray-700 truncate">Enrollment: {{
+                                    options.enrollment }} / {{ options.max_enrollment }}&lt;/span>
+                                &lt;span class="p-4 flex justify-end">
+                                    &lt;button @click="selectReassignment(options)"
+                                        class="bg-blue-600 text-white px-2 py-1 text-sm font-semibold rounded hover:bg-blue-500">Select&lt;/button>
+                                &lt;/span>
+                            &lt;/li>
+                        &lt;/ul>
+
+                    &lt;/div>
+
+                &lt;/div>
+
+
+                &lt;button @click="ToggleReassignmentModal"
+                    class="mt-4 w-42 bg-red-500 text-white py-2 px-4 rounded cursor-pointer hover:bg-red-400">Close&lt;/button>
+            &lt;/div>
+        &lt;/div>
+    &lt;/div>
+
+    &lt;span class=" text-black text-2xl font-semibold mb-4 text-start">&lt;/span>
+    &lt;div class="flex flex-col space-y-4 text-black text-start h-full pl-6">
+        &lt;!-- Display class details when data is available -->
+        &lt;div v-if="classData">
+            &lt;p class="text-5xl font-bold mb-10" style="color: red;"> {{ classData.courseName }}&lt;/p>
+            &lt;h2 class="text-3xl">{{ classData.name }}&lt;/h2>
+            &lt;p class="text-2xl">&lt;strong>Term:&lt;/strong> {{ classData.term }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Section:&lt;/strong> {{ classData.section }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Room:&lt;/strong> {{ classData.room }}&lt;/p>
+            &lt;p class="text-2xl">&lt;strong>Time:&lt;/strong> {{ classData.time }}&lt;/p>
+            &lt;p class="text-2xl">
+                &lt;strong>Enrollment:&lt;/strong>
+                &lt;!-- Dropdown for updating class enrollment numbers instead of using increments -->
+                &lt;select v-if="classData" v-model.number="classData.currentEnrollment" @change="updateEnrollment($event.target.value)"
+                    class="mx-1 text-black rounded bg-gray-100 border px-1 cursor-pointer">
+                    &lt;!-- loops 1 … maxEnrollment -->
+                    &lt;option v-for="i in classData.maxEnrollment + 10" :key="i" :value="i - 1">{{ i - 1}}&lt;/option>
+                &lt;/select>
+                / {{ classData.maxEnrollment }}
+            &lt;/p>
+
+            &lt;p v-if="professors" class="text-2xl">&lt;strong>Professors: &lt;/strong>
+                &lt;span v-for="(professor, index) in professors" :key="professor.id" class="text-2xl">
+                    {{ professor.first_name }} {{ professor.last_name }}&lt;span v-if="index &lt; professors.length - 1">,
+                    &lt;/span>
+                &lt;/span>
+            &lt;/p>
+        &lt;/div>
+
+        &lt;!-- Error state -->
+        &lt;div v-else>
+            &lt;p class="text-red-600">Class not found.&lt;/p>
+        &lt;/div>
+
+        &lt;div v-if="classData" class="flex flex-col justify-between w-96 space-y-4 w-50">
+            &lt;div class="flex space-x-4">
+                &lt;button @click="updateEnrollment('add')"
+                    class="font-semibold bg-green-300 py-3 w-60 rounded-xl hover:bg-green-500 cursor-pointer border-2">Add
+                    Student&lt;/button>
+                &lt;button @click="updateEnrollment('remove')"
+                    class="font-semibold bg-red-300 py-3 w-60 rounded-xl hover:bg-red-500 cursor-pointer border-2">
+                    Remove Student
+                &lt;/button>
+            &lt;/div>
+
+            &lt;div v-if="classData" class="flex flex-col hover:bg-yellow-500 w-full bg-yellow-200  border-2 border-yellow-700 cursor-pointer" @click="fetchPossibleReassignments(classData.id)">
+                &lt;span 
+                    class="flex items-center justify-center font-semibold w-full h-10 rounded-xl text-center">
+                    Possible Manual Reassignments
+                &lt;/span>
+                &lt;span class="text-black text-xs text-wrap text-center text-align-center p-2"> 
+                    (Keep in mind that this only considers simple swaps and doesn't find BEST swaps.)
+                &lt;/span>
+            &lt;/div>
+        &lt;/div>
+        &lt;router-link
+            to="/classes"
+            class="ml-6 mt-4 inline-block text-red-800 hover:text-red-1000 font-bold text-lg underline"
+            >
+            ← Back
+        &lt;/router-link>
+    &lt;/div>
+
+
+&lt;/template>
+
+&lt;script>
+import axios from "axios";
+
+/**
+ * ClassDetails component displays details for a specific class and allows enrollment updates.
+ */
+export default {
+    name: "ClassDetails",
+    data() {
+        return {
+            /**
+             * The class data fetched from the backend.
+             * @vue-data {Object|null}
+             */
+            classData: null,
+            /**
+             * The visibility state of the reassignment modal.
+             * @vue-data {boolean}
+             */
+            reassignmentModalVisible: false,
+            /**
+             * The list of possible reassignments for the class.
+             * @vue-data {string[]}
+             */
+            possibleReassignments: null,
+            noReassignments: false,
+            loadingReassignments: false,
+            /**
+             * The list of professors associated with the class.
+             * @vue-data {Object[]}
+             */
+            professors: null,
+        };
+    },
+    methods: {
+        /**
+         * Toggles the visibility of the reassignment modal.
+         * This method is a placeholder and should be implemented as needed.
+         *
+         * @vue-method
+         */
+        ToggleReassignmentModal() {
+            // Placeholder for modal toggle logic
+            this.reassignmentModalVisible = !this.reassignmentModalVisible;
+        },
+        async fetchPossibleReassignments(class_id) {
+            try {
+                this.loadingReassignments = true;
+                const response = await axios.get(`http://127.0.0.1:5000/class/${class_id}/possible-reassignments`);
+                this.possibleReassignments = response.data;
+                this.ToggleReassignmentModal();
+                if (this.possibleReassignments.length === 0) {
+                    this.noReassignments = true;
+                } else {
+                    this.noReassignments = false;
+                }
+            } catch (error) {
+                console.error("Failed to load reassignments:", error);
+            } finally {
+                this.loadingReassignments = false;
+            }
+        },
+        /**
+         * Fetches details for a specific class using the ID from the current route.
+         * Updates the `classData` reactive property with the fetched data or null if there's an error.
+         *
+         * @vue-method
+         * @async
+         * @returns {Promise&lt;void>} Resolves after setting the class data.
+         */
+        async fetchClassDetails() {
+            try {
+                const response = await axios.get(`http://127.0.0.1:5000/class/${this.$route.params.id}`);
+                this.classData = response.data;
+            } catch (error) {
+                this.classData = null;
+            }
+        },
+        /**
+         * Sends an action to update the enrollment count for the class.
+         * Supports incrementing or decrementing based on the "add" or "remove" action.
+         * Refreshes the class data after updating.
+         *
+         * @vue-method
+         * @async
+         * @param {"add"|"remove"} action - The type of enrollment update.
+         * @returns {Promise&lt;void>} Resolves after the update and refetch.
+         */
+        async updateEnrollment(action) {
+            try {
+                await axios.post(`http://127.0.0.1:5000/class/${this.$route.params.id}/update-enrollment`, { action });
+                // Fetch updated class details
+                this.fetchClassDetails();
+            } catch (error) {
+                console.error(error);
+            }
+        },
+        /**
+         * Fetches the list of professors associated with the class.
+         * Updates the `professors` reactive property with the fetched data.
+         *
+         * @vue-method
+         * @async
+         * @returns {Promise&lt;void>} Resolves after setting the professors data.
+         */
+        async getProfessors() {
+            try {
+                const response = await axios.get(`http://127.0.0.1:5000/class/${this.$route.params.id}/professors`);
+                this.professors = response.data;
+            } catch (error) {
+                console.error("Failed to load professors:", error);
+            }
+        },
+
+        /**
+         * Sends an action to swap the current class with the selected class.
+         * If a successful swap happens, it updates the current class info and closes the swap selection box.
+         * 
+         * @vue-method
+         * @async
+         * @param room The selected room to swap with
+         */
+        async selectReassignment(swap_id) {
+            try {
+                // Swap class information
+                var currentClassId = this.$route.params.id;
+                await axios.post(`http://127.0.0.1:5000/swap-classrooms`, {
+                    crowded_id: currentClassId,
+                    target_id: swap_id.id,
+                });
+                console.log('Swapped classes', this.$route.params.id, ' and ', swap_id.id, ' successfully');
+                alert('Successfully swapped classes!');
+
+                // Update current class
+                this.fetchClassDetails();
+
+                // Close the swap selection box
+                this.ToggleReassignmentModal();
+            } catch (error) {
+                console.error("Failed to switch classes:", error);
+                alert('Failed to swap classes.');
+            }
+        },
+    },
+    /**
+     * Lifecycle hook: called after the component is mounted.
+     * Triggers the initial fetch of class details.
+     */
+    mounted() {
+        this.fetchClassDetails();
+        this.getProfessors();
+    },
+};
+&lt;/script></code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-ClassDetails.html">ClassDetails</a></li><li><a href="module-ClassList.html">ClassList</a></li><li><a href="module-HomePage.html">HomePage</a></li></ul><h3>Global</h3><ul><li><a href="global.html#classData">classData</a></li><li><a href="global.html#courses">courses</a></li><li><a href="global.html#errorMessage">errorMessage</a></li><li><a href="global.html#filteredCourses">filteredCourses</a></li><li><a href="global.html#possibleReassignments">possibleReassignments</a></li><li><a href="global.html#professors">professors</a></li><li><a href="global.html#reassignmentModalVisible">reassignmentModalVisible</a></li><li><a href="global.html#search">search</a></li><li><a href="global.html#showOverCapacityFirst">showOverCapacityFirst</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Fri May 16 2025 02:47:27 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
