@@ -212,9 +212,10 @@ def recommended_swaps_if_no_swaps_in_same_timeslot(db_path, not_swappable):
 
 if __name__ == "__main__":
     import sqlite3
+    from app import app
     import os
 
-    DB_FILE = "database.db"
+    DB_FILE = app.config["DB_FILE"] 
 
     # Find same slot swaps first to avoid unnecessary cross-slot swaps
     same, not_swappable = recommend_swaps_per_timeslot(DB_FILE)
